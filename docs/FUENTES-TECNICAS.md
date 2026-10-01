@@ -21,4 +21,4 @@ Consulta: 1 de octubre de 2026. Referencias de implementación; las reglas del c
 - OWASP — sesiones: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
 - OWASP — CSRF: https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
 
-No se verificó el DNS de coro.cintavera.dev, ni se accedió a una cuenta bancaria, proveedor de alojamiento o configuración de producción.
+El 1 de octubre de 2026 se verificó `coro.syntavera.dev` en el Coolify autorizado y se publicó la aplicación con HTTPS. No se accedió a cuentas bancarias ni se enviaron datos reales a proveedores de IA. Cloudflare no requirió cambios porque el registro del host ya existía.

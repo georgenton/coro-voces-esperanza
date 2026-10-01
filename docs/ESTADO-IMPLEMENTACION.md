@@ -31,12 +31,18 @@ Fecha de corte: 1 de octubre de 2026.
 - `pnpm test:e2e`: escritorio y móvil; redirección de pantalla privada, bloqueo de autorregistro, bloqueo de adjuntos anónimos y ausencia de desborde horizontal.
 - Construcción de imagen Docker y arranque real: migraciones sin pendientes y `/api/health` saludable.
 - Simulacro aislado de persistencia y restauración: reinicio y recreación conservaron PostgreSQL y el adjunto; dump/volumen se restauraron en recursos nuevos con los mismos conteos, hash, propietario/modo y descarga autenticada sin caché compartida.
+- GitHub Actions pasó dos veces sobre el cambio funcional y dos veces sobre la corrección del healthcheck: lint, tipos, unitarias, referencia, migraciones, integración, build, E2E y construcción Docker.
+- Producción en `https://coro.syntavera.dev`: HTTPS y página de acceso 200, health externo 200, health interno de Coolify `healthy`, PostgreSQL privado y volumen persistente.
+- Producción inició sin datos inventados: 0 miembros, usuarios, partes de pago, aplicaciones y movimientos; solo 8 cuerdas, 4 conceptos y 3 cuentas de catálogo.
+- Respaldo PostgreSQL programado diariamente y primera ejecución manual exitosa; la retención es local al host.
 
 ## Pendiente de evidencia o decisión humana
 
 - El Excel real no se publicó en la base operativa. Solo se inspeccionó en modo lectura; identidades, fechas, saldos de apertura, marcas y aplicaciones requieren revisión y aprobación humana.
 - La transformación definitiva ya está implementada, pero ningún dato real fue aprobado ni promovido. Revertir una importación ya usada por operaciones posteriores sigue requiriendo ajustes/reversos auditados, no borrado.
 - No se probaron comprobantes bancarios reales ni el proveedor de visión; sin clave, el flujo manual permanece funcional.
+- Falta el nombre y correo aprobados del SUPERADMIN inicial. No se creó una identidad ni contraseña provisional.
+- Falta configurar almacenamiento externo para copias y ejecutar un simulacro de restauración usando un respaldo real de producción en un host separado.
 - La matriz C01–C50 está documentada. Persisten coberturas parciales que requieren E2E autenticado por rol, comprobantes reales aprobados y validación operativa; ver `docs/MATRIZ-C01-C50.md`.
 - El estado de despliegue, URL, commit e imagen se registra en `docs/DEPLOY-COOLIFY.md`; la migración histórica real continúa bloqueada hasta aprobación humana.
 

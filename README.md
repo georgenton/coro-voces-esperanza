@@ -2,6 +2,8 @@
 
 Aplicación privada y responsive para miembros, cuotas, pagos, conciliación, incidencias, actividades y asistencia del coro. Usa Next.js 16, TypeScript, PostgreSQL, Prisma y Better Auth en un único proyecto.
 
+Producción: `https://coro.syntavera.dev`. No existe autorregistro; el histórico permanece pendiente de aprobación y el primer SUPERADMIN requiere una identidad aprobada.
+
 ## Requisitos
 
 - Node.js 24 LTS (`.nvmrc`: 24.21.0)

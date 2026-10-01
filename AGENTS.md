@@ -13,7 +13,7 @@ Una aplicación pequeña para un coro: cuotas, tesorería, conciliación, incide
 ## Autorización operativa vigente
 - Repositorio autorizado: `georgenton/coro-voces-esperanza`; comprobar visibilidad y estado antes de escribir. No cambiar su visibilidad ni desactivar protecciones.
 - Infraestructura autorizada: recursos nuevos y exclusivos del coro en `https://ops.syntavera.dev`; no reutilizar ni alterar bases, volúmenes, aplicaciones o secretos de otros proyectos.
-- Dominio: preferir `coro.cintavera.dev` solo si la zona y disponibilidad se confirman; como alternativa, `coro.syntavera.dev` solo si esa zona está confirmada y el nombre está libre. Hacer únicamente el registro mínimo necesario y verificar HTTPS.
+- Dominio confirmado por Jorge: `coro.syntavera.dev`, dentro de la zona existente `syntavera.dev`. No crear ni modificar registros en `cintavera.dev`. Hacer únicamente el cambio DNS mínimo si fuese necesario y verificar HTTPS.
 - Producción inicia vacía salvo catálogos y un acceso SUPERADMIN aprobado. No sembrar miembros, pagos, saldos o fechas ficticias ni aprobar datos históricos.
 - Siguen prohibidos: borrar datos, force push, saltar protecciones, contratar servicios pagos y enviar Excel o comprobantes reales a proveedores de IA no aprobados.
 
