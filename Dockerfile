@@ -34,7 +34,7 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 RUN apt-get update \
-  && apt-get install --no-install-recommends --yes ca-certificates openssl \
+  && apt-get install --no-install-recommends --yes ca-certificates curl openssl \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs --home-dir /app nextjs \
