@@ -44,6 +44,19 @@ En un cierre, reportar total leído, aceptado, rechazado, pendiente y enlazado, 
 
 Los fixtures con nombres reales están en `private/`, fuera de Git. Las pruebas públicas deben usar personas ficticias. Ejecutar pruebas de importación real solo localmente y sin subir resultados identificables a CI pública.
 
+### Contrato implementado de promoción
+
+1. Una fila se guarda con un tipo explícito y un JSON validado. No se aprueba una fila sin mapeo válido.
+2. Guardar o cambiar un mapeo incrementa la versión del lote, elimina su hash aprobado e invalida cualquier vista previa no ejecutada.
+3. Aprobar el lote vuelve a validar todas las filas aprobadas y fija `mappingVersion`, `mappingHash`, aprobador y fecha. Todavía no publica nada.
+4. La vista previa se calcula para un alcance explícito (`ALL_APPROVED`, `MEMBERS` o `FINANCE`) y muestra altas, enlaces, cargos, aplicaciones LEGACY, movimientos, aperturas, duplicados, diferencias y bloqueos.
+5. La promoción vuelve a comprobar versión/hash y estado, reclama el plan, recalcula bloqueos y publica el alcance en una transacción serializable. Un fallo revierte todo el alcance.
+6. Cada destino queda enlazado a lote/fila mediante `ImportPublication`; las claves estables y constraints impiden duplicar en reintentos o concurrencia.
+7. Una fila ya publicada no se edita. Correcciones posteriores usan los mecanismos operativos auditados.
+8. `LEGACY_ALLOCATION` crea una parte sin `MoneyMovement`, con `cashEffect=false`, `receivedAt=null` y `appliedAt=null` cuando la fecha es desconocida.
+
+El detalle de campos, precondiciones e invariantes está en `docs/CONTRATO-PROMOCION.md`.
+
 ## 5. Pruebas mínimas de la aplicación a implementar
 
 | ID | Escenario | Resultado requerido |

@@ -58,6 +58,14 @@ PostgreSQL no publica puerto. Los adjuntos persisten en el volumen `private_uplo
 - Las transferencias internas no son ingreso ni gasto consolidado.
 - Los movimientos confirmados se corrigen con reversos; no se borran.
 - El Excel entra a staging y nunca es la base operativa.
+- Aprobar el mapeo y promoverlo son pasos distintos. Cada edición invalida la aprobación anterior.
+- Una aplicación histórica `LEGACY` puede reducir un cargo aprobado, pero no crea un movimiento ni altera caja.
+
+## Promoción del histórico
+
+En **Importar Excel** el flujo es: cargar → mapear cada fila → aprobar/excluir filas e incidencias → aprobar la versión completa → generar vista previa por alcance → promover. Los alcances disponibles son todo, miembros/cuerdas o finanzas. Cada promoción es atómica, reintentable e idempotente y conserva archivo, hoja, fila, huella, versión, hash y aprobadores.
+
+No se promueve una identidad aproximada, una fecha desconocida, un cargo con importe diferente, una aplicación excesiva ni un mapeo editado después de aprobarse. Consulta `docs/CONTRATO-PROMOCION.md`.
 
 ## Documentación
 
@@ -66,5 +74,7 @@ PostgreSQL no publica puerto. Los adjuntos persisten en el volumen `private_uplo
 - `docs/INFORME-IMPORTACION.md`: estado no nominativo del importador.
 - `docs/ESTADO-IMPLEMENTACION.md`: alcance implementado, evidencia ejecutada y pendientes reales.
 - `docs/DEPLOY-COOLIFY.md`: despliegue, dominio, volumen, cron y restauración.
+- `docs/CONTRATO-PROMOCION.md`: contrato de staging, aprobación, vista previa y publicación.
+- `docs/MATRIZ-C01-C50.md`: trazabilidad de cada criterio a prueba, comando y evidencia.
 
 `private/`, Excel, comprobantes, respaldos y el diagnóstico confidencial están ignorados por Git y Docker.

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppRole } from "@/generated/prisma/client";
 import type { AccessContext } from "@/lib/access";
 import { SignOutButton } from "@/components/sign-out-button";
+import { Notice } from "@/components/notice";
 
 const fullNavigation = [
   ["/resumen", "Resumen"],
@@ -60,7 +61,7 @@ export function AppShell({ access, children }: { access: AccessContext; children
           </nav>
           <p className="sidebar-note">Información privada. Los comprobantes y datos personales solo se muestran según tu rol y cuerda.</p>
         </aside>
-        <main>{children}</main>
+        <main><Notice warning="Migración histórica pendiente de aprobación" />{children}</main>
       </div>
     </div>
   );
