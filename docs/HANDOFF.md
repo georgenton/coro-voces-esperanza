@@ -10,8 +10,10 @@ Jorge autorizó para este proyecto: commits y push, ramas/PR, merge a `main` con
 
 - Repositorio: `https://github.com/georgenton/coro-voces-esperanza`.
 - Visibilidad comprobada: pública.
+- Rama predeterminada corregida a `main`.
 - Rama de trabajo: `codex/coro-voces-esperanza`.
-- El repositorio remoto estaba vacío. El checkpoint revisado `6b2bec3` inicializó la rama de trabajo y `main` con el mismo árbol, después de comprobar exclusiones de privacidad.
+- PR 1 integrado con todos los controles verdes; merge `c600b64dc3087a0e448b091da1498aa2889d32c2`.
+- La corrección del healthcheck quedó integrada en `main` como merge `a6d048eb313c98f87cf726963b45b0db0922e056`. GitHub creó el merge pero no marcó el PR 2 como fusionado; el PR se cerró después de verificar los dos padres y el árbol en `main`.
 - `private/`, Excel/CSV, diagnóstico confidencial, entornos, adjuntos, respaldos y artefactos de pruebas/build siguen ignorados por Git y Docker.
 
 ## Cambio funcional principal
@@ -27,11 +29,15 @@ Archivos centrales:
 
 ## Datos reales
 
-No se promovió, aprobó ni publicó ningún saldo, identidad, fecha o pago real. El Excel y los extractos en `private/` no entraron a Git, CI, Docker, Notion ni servicios externos. Producción debe iniciar solo con catálogos y un SUPERADMIN aprobado; la aplicación muestra “Migración histórica pendiente de aprobación”.
+No se promovió, aprobó ni publicó ningún saldo, identidad, fecha o pago real. El Excel y los extractos en `private/` no entraron a Git, CI, Docker, Notion ni servicios externos. Producción inició solo con catálogos: 8 cuerdas, 4 conceptos, 3 cuentas, y cero miembros, usuarios, partes de pago, aplicaciones o movimientos. El SUPERADMIN continúa pendiente de identidad aprobada; la aplicación muestra “Migración histórica pendiente de aprobación”.
 
 ## Verificación y operación
 
 - 25 pruebas unitarias, 37 de referencia, 11 de integración PostgreSQL y 6 E2E Docker pasaron localmente.
 - La imagen del commit funcional es `voces-esperanza:e006564`, digest local `sha256:8b108e710da7c8293fa7b7e267e206deffffba9033fdfc3a9cf30ddabe925684`.
 - Persistencia y restauración pasaron con datos y adjunto sintéticos en recursos separados; ver `docs/DEPLOY-COOLIFY.md`.
-- La URL, commit final, PR/CI y recursos Coolify se completan al cierre de esta misma sesión. Hasta entonces, este documento no acredita publicación externa.
+- Producción: `https://coro.syntavera.dev`, commit `a6d048e`, health interno y externo correctos.
+- Coolify: proyecto `curszcfgrj5qgqoalyjpjfx1`, entorno `hqjrkmlxe1xybokuktovevmb`, app `qwag6glb0gc6jfzlfwa46fi4`, PostgreSQL `cw9lgsmko0t2rnramfsrqmrm`.
+- DNS: se usó el registro ya existente de `coro.syntavera.dev`; no se modificó Cloudflare ni se tocó `cintavera.dev`.
+- Respaldo `qpat2ip0sang71p3yfh0muwz`: diario a las 03:00, primera ejecución manual exitosa de 101.92 KB. La copia es local al host y no sustituye un respaldo externo.
+- Acceso inicial pendiente: solicitar nombre y correo del SUPERADMIN; no inventar identidad ni compartir contraseña/token por documentación o chat.

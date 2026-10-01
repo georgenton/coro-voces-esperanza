@@ -1,6 +1,17 @@
 # Despliegue en Coolify
 
-La aplicación está preparada para una sola instancia Next.js y una base PostgreSQL separada. Este documento no confirma que el VPS, DNS o secretos existan. No se ha publicado producción ni modificado DNS.
+La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare.
+
+## Estado de producción verificado
+
+- Proyecto Coolify: `Voces de Esperanza` (`curszcfgrj5qgqoalyjpjfx1`), entorno `production` (`hqjrkmlxe1xybokuktovevmb`).
+- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, commit desplegado `a6d048eb313c98f87cf726963b45b0db0922e056`.
+- PostgreSQL 17 privado: `voces-postgres` (`cw9lgsmko0t2rnramfsrqmrm`), base `voces_esperanza`, sin puerto público.
+- Volumen de adjuntos: `qwag6glb0gc6jfzlfwa46fi4-voces-uploads` en `/data/uploads`.
+- HTTPS externo: `/api/health` respondió 200 con `{"status":"healthy"}`, `Cache-Control: no-store` y `X-Robots-Tag: noindex, nofollow`.
+- Migraciones: 3 aplicadas; `prisma migrate status` confirmó que el esquema está al día.
+- Inicio seguro: 8 cuerdas, 4 conceptos y 3 cuentas base; 0 miembros, 0 usuarios, 0 partes de pago, 0 aplicaciones y 0 movimientos.
+- La imagen final incluye `curl` para el healthcheck interno de Coolify. El primer intento sin esa dependencia falló de forma segura y Coolify retiró el contenedor no saludable; el segundo quedó `healthy`.
 
 ## 1. Recursos
 
@@ -14,7 +25,7 @@ La aplicación está preparada para una sola instancia Next.js y una base Postgr
 Definir en Coolify, sin guardarlas en Git:
 
 - `DATABASE_URL`: URL interna de PostgreSQL con TLS cuando corresponda.
-- `APP_BASE_URL`: `https://coro.cintavera.dev` solo después de confirmar el host.
+- `APP_BASE_URL=https://coro.syntavera.dev`.
 - `BETTER_AUTH_SECRET`: aleatorio de 32 bytes o más.
 - `QR_SIGNING_SECRET`: aleatorio e independiente.
 - `CRON_SECRET`: aleatorio e independiente.
@@ -28,17 +39,17 @@ La aplicación falla de forma segura si faltan base de datos o secretos. No hay 
 
 El contenedor usa Node.js 24.21.0, compila salida standalone y ejecuta `prisma migrate deploy` antes de iniciar `server.js`. El usuario del proceso no es root.
 
-El primer acceso SUPERADMIN se crea desde una consola temporal del mismo entorno:
+El primer acceso SUPERADMIN se crea desde una consola temporal del mismo entorno, únicamente cuando la identidad haya sido aprobada:
 
 ```bash
 SEED_ADMIN_NAME='nombre-aprobado' SEED_ADMIN_EMAIL='correo-aprobado' SEED_ADMIN_PASSWORD='contraseña-larga-temporal' ./node_modules/.bin/tsx prisma/seed.ts
 ```
 
-Cambiar la contraseña después del alta. El seed nunca lee `private/` y los miembros ficticios están desactivados salvo que `SEED_SYNTHETIC_DATA=true` se configure explícitamente; no habilitarlo en producción.
+No registrar la contraseña en Git, documentación, Notion ni tickets. El seed nunca lee `private/` y los miembros ficticios están desactivados salvo que `SEED_SYNTHETIC_DATA=true` se configure explícitamente; no habilitarlo en producción. Al cierre técnico, el SUPERADMIN inicial sigue pendiente de nombre y correo aprobados.
 
 ## 4. Dominio y proxy
 
-Configurar en Coolify `coro.cintavera.dev` con HTTPS y redirección a HTTPS. Verificar primero que `cintavera.dev` sea el dominio aprobado; no sustituirlo por otro dominio parecido. El proxy debe conservar `Host`, `X-Forwarded-Proto` y la IP de origen. No habilitar caché compartida para rutas autenticadas ni adjuntos.
+Coolify usa `coro.syntavera.dev` con HTTPS, redirección desde HTTP y cabecera `X-Robots-Tag: noindex, nofollow`. La zona aprobada es `syntavera.dev`; `cintavera.dev` no pertenece al alcance de esta aplicación. El proxy conserva `Host`, `X-Forwarded-Proto` y la IP de origen. No habilitar caché compartida para rutas autenticadas ni adjuntos.
 
 El healthcheck es `GET /api/health`. Solo responde saludable cuando PostgreSQL acepta consultas.
 
@@ -47,7 +58,7 @@ El healthcheck es `GET /api/health`. Solo responde saludable cuando PostgreSQL a
 Después de configurar día y hora desde la aplicación, programar una llamada diaria:
 
 ```bash
-curl --fail --request POST 'https://coro.cintavera.dev/api/cron/rehearsals' \
+curl --fail --request POST 'https://coro.syntavera.dev/api/cron/rehearsals' \
   --header "Authorization: Bearer ${CRON_SECRET}"
 ```
 
@@ -71,6 +82,8 @@ Restaurar primero en un PostgreSQL separado, montar una copia del volumen y comp
 5. la aplicación no apunta a la base de producción durante la prueba.
 
 No se declara una restauración probada hasta ejecutar este procedimiento con un respaldo real autorizado.
+
+En Coolify quedó habilitado el respaldo de `voces_esperanza` a las 03:00 `America/Guayaquil`, con retención local de 14 copias/14 días y alerta después de 26 horas. La primera ejecución manual terminó `Success`, tamaño 101.92 KB y disponibilidad local. Sigue pendiente una copia externa aprobada: este respaldo está fuera del contenedor, pero en el mismo host y no cubre la pérdida completa del servidor.
 
 ## 7. Evidencia del simulacro aislado
 
