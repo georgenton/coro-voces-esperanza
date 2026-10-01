@@ -1,10 +1,22 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import ExcelJS from "exceljs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createAttendanceToken } from "@/server/attendance/tokens";
 import { checkInWithToken } from "@/server/attendance/service";
 import { prisma } from "@/lib/db";
-import { allocateExistingPayment, registerAndAllocatePayment } from "@/server/finance/payments";
+import { allocateExistingPayment, registerAndAllocatePayment, reversePayment } from "@/server/finance/payments";
 import { registerExpense, registerInterest, registerInternalTransfer } from "@/server/finance/treasury";
+import { generateChargesForPeriod } from "@/server/finance/charges";
+import { consumeInvitation } from "@/server/auth/invitations";
+import { replaceUserAccess } from "@/server/auth/access";
+import {
+  approveImportBatch,
+  createPromotionPreview,
+  promoteImportPlan,
+  resolveImportItem,
+  saveImportRowMapping,
+  stageWorkbook,
+} from "@/server/imports/service";
 
 describe("integración PostgreSQL", () => {
   let actorId: string;
@@ -13,6 +25,7 @@ describe("integración PostgreSQL", () => {
   let savingsAccountId: string;
   let activityId: string;
   let chargeId: string;
+  let conceptId: string;
 
   beforeAll(async () => {
     const suffix = randomUUID();
@@ -27,6 +40,7 @@ describe("integración PostgreSQL", () => {
     savingsAccountId = savings.id;
     activityId = (await prisma.activity.create({ data: { name: `Actividad ${suffix}`, status: "OPEN" } })).id;
     const concept = await prisma.billingConcept.create({ data: { systemKey: `TEST-${suffix}`, name: "Cuota ficticia", defaultAmountCents: 500 } });
+    conceptId = concept.id;
     const charge = await prisma.charge.create({ data: { dedupeKey: `charge-${suffix}`, memberId, conceptId: concept.id, period: "2026-02", amountCents: 500 } });
     chargeId = charge.id;
   });
@@ -89,5 +103,173 @@ describe("integración PostgreSQL", () => {
     }, actorId);
     expect(await prisma.moneyMovement.count()).toBe(countBefore);
     expect(await prisma.paymentPart.count({ where: { movementId: movement.id } })).toBe(1);
+  });
+
+  it("promueve una aplicación LEGACY concurrente sin crear caja ni duplicados", async () => {
+    const suffix = randomUUID();
+    const batch = await prisma.importBatch.create({ data: {
+      sha256: suffix.replaceAll("-", "").padEnd(64, "0").slice(0, 64),
+      originalName: "matriz-sintetica.xlsx",
+      storageKey: `synthetic/${suffix}.xlsx`,
+      sizeBytes: 100,
+      status: "REVIEW_REQUIRED",
+      sheetCount: 1,
+      importedById: actorId,
+    } });
+    const row = await prisma.importRow.create({ data: {
+      batchId: batch.id,
+      sheetName: "CUOTAS SINTETICAS",
+      rowNumber: 7,
+      rawText: "Miembro Ficticio | 5",
+      recordFingerprint: randomUUID(),
+    } });
+    await saveImportRowMapping(row.id, {
+      type: "LEGACY_ALLOCATION",
+      memberId,
+      conceptId,
+      period: "2026-03",
+      chargeAmountCents: 500,
+      appliedAmountCents: 500,
+      appliedOn: null,
+    }, actorId);
+    await resolveImportItem({ kind: "row", id: row.id, status: "APPROVED" }, actorId);
+    await approveImportBatch(batch.id, actorId);
+    const plan = await createPromotionPreview(batch.id, "FINANCE", actorId);
+    const movementsBefore = await prisma.moneyMovement.count();
+    const results = await Promise.all([promoteImportPlan(plan.id, actorId), promoteImportPlan(plan.id, actorId)]);
+    expect(results.every(({ id }) => id === plan.id)).toBe(true);
+    const part = await prisma.paymentPart.findUniqueOrThrow({ where: { sourceReference: `import:${batch.sha256}:${row.id}:LEGACY_PAYMENT_PART` } });
+    expect(part).toMatchObject({ movementId: null, isLegacy: true, cashEffect: false, receivedAt: null });
+    expect(await prisma.allocation.count({ where: { paymentPartId: part.id } })).toBe(1);
+    expect(await prisma.moneyMovement.count()).toBe(movementsBefore);
+    expect(await prisma.importPublication.count({ where: { rowId: row.id } })).toBe(2);
+    await expect(saveImportRowMapping(row.id, { type: "IDENTITY_LINK", memberId, sourceName: "Miembro Ficticio" }, actorId)).rejects.toThrow("ya fue promovida");
+  });
+
+  it("C31 reimporta el mismo XLSX sintético sin crear otro lote", async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.addWorksheet("INDICE GENERAL").addRow(["Hoja", "Descripción"]);
+    const sheet = workbook.addWorksheet("DATOS SINTETICOS");
+    sheet.addRow(["Persona Ficticia", 500]);
+    const bytes = Buffer.from(await workbook.xlsx.writeBuffer());
+    const file = new File([bytes], "reimportacion-sintetica.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const first = await stageWorkbook(file, actorId);
+    const second = await stageWorkbook(file, actorId);
+    expect(first.duplicate).toBe(false);
+    expect(second.duplicate).toBe(true);
+    expect(second.batch.id).toBe(first.batch.id);
+  });
+
+  it("C28 revierte el pago, elimina sus aplicaciones y reabre el cargo", async () => {
+    const suffix = randomUUID();
+    const charge = await prisma.charge.create({ data: {
+      dedupeKey: `reverse-${suffix}`,
+      memberId,
+      conceptId,
+      period: "2026-04",
+      amountCents: 500,
+    } });
+    const payment = await registerAndAllocatePayment({
+      accountId,
+      amountCents: 500,
+      occurredAt: new Date(),
+      idempotencyKey: suffix,
+      parts: [{ memberId, amountCents: 500, allocations: [{ chargeId: charge.id, amountCents: 500 }] }],
+    }, actorId);
+    const reversal = await reversePayment(payment.id, "Corrección sintética de integración", actorId);
+    expect(reversal).toMatchObject({ type: "REVERSAL", direction: "OUT", amountCents: 500 });
+    expect(await prisma.allocation.count({ where: { chargeId: charge.id } })).toBe(0);
+    expect((await prisma.charge.findUniqueOrThrow({ where: { id: charge.id } })).status).toBe("PENDING");
+  });
+
+  it("invitación de un solo uso y revocación inmediata de sesión", async () => {
+    const token = randomUUID();
+    const email = `${randomUUID()}@example.test`;
+    const invitation = await prisma.invitation.create({ data: {
+      email,
+      tokenHash: createHash("sha256").update(token).digest("hex"),
+      expiresAt: new Date(Date.now() + 60_000),
+      createdById: actorId,
+      role: "MIEMBRO",
+    } });
+    const attempts = await Promise.allSettled([
+      consumeInvitation({ token, password: "Synthetic-password-123", name: "Invitada Ficticia" }),
+      consumeInvitation({ token, password: "Synthetic-password-123", name: "Invitada Ficticia" }),
+    ]);
+    expect(attempts.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
+    expect((await prisma.invitation.findUniqueOrThrow({ where: { id: invitation.id } })).consumedAt).not.toBeNull();
+    const invitedUser = await prisma.user.findUniqueOrThrow({ where: { email } });
+    await prisma.session.create({ data: {
+      id: randomUUID(),
+      token: randomUUID(),
+      userId: invitedUser.id,
+      expiresAt: new Date(Date.now() + 60_000),
+    } });
+    const changed = await replaceUserAccess({ userId: invitedUser.id, roles: ["JEFE_DE_CUERDA"], sectionIds: [] }, actorId);
+    expect(changed.revokedSessions).toBe(1);
+    expect(await prisma.session.count({ where: { userId: invitedUser.id } })).toBe(0);
+    expect(await prisma.userRole.findMany({ where: { userId: invitedUser.id }, select: { role: true } })).toEqual([{ role: "JEFE_DE_CUERDA" }]);
+  });
+
+  it("C02 genera un solo cargo ante ejecuciones concurrentes", async () => {
+    await prisma.chargeRule.create({ data: {
+      conceptId,
+      startsPeriod: "2027-02",
+      endsPeriod: "2027-02",
+      amountCents: 500,
+      excludeJanuary: true,
+    } });
+    await Promise.all([generateChargesForPeriod("2027-02", actorId), generateChargesForPeriod("2027-02", actorId)]);
+    expect(await prisma.charge.count({ where: { memberId, conceptId, period: "2027-02" } })).toBe(1);
+  });
+
+  it("C17 dos pagos concurrentes no sobreaplican el mismo cargo", async () => {
+    const suffix = randomUUID();
+    const charge = await prisma.charge.create({ data: {
+      dedupeKey: `concurrent-${suffix}`,
+      memberId,
+      conceptId,
+      period: "2027-03",
+      amountCents: 500,
+    } });
+    const payment = (key: string) => registerAndAllocatePayment({
+      accountId,
+      amountCents: 500,
+      occurredAt: new Date(),
+      idempotencyKey: key,
+      parts: [{ memberId, amountCents: 500, allocations: [{ chargeId: charge.id, amountCents: 500 }] }],
+    }, actorId);
+    const results = await Promise.allSettled([payment(`${suffix}-a`), payment(`${suffix}-b`)]);
+    expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
+    expect(await prisma.allocation.count({ where: { chargeId: charge.id } })).toBe(1);
+    expect((await prisma.allocation.aggregate({ where: { chargeId: charge.id }, _sum: { amountCents: true } }))._sum.amountCents).toBe(500);
+  });
+
+  it("C12 conserva una sola entrada al repartir 5+5+2 entre dos personas", async () => {
+    const suffix = randomUUID();
+    const sectionId = (await prisma.member.findUniqueOrThrow({ where: { id: memberId }, select: { currentSectionId: true } })).currentSectionId!;
+    const second = await prisma.member.create({ data: {
+      displayName: "Segunda Persona Ficticia",
+      normalizedName: `segunda persona ficticia ${suffix}`,
+      status: "ACTIVE",
+      currentSectionId: sectionId,
+    } });
+    const parking = await prisma.billingConcept.create({ data: { systemKey: `PARK-${suffix}`, name: "Parqueadero ficticio", defaultAmountCents: 200 } });
+    const firstCharge = await prisma.charge.create({ data: { dedupeKey: `multipart-a-${suffix}`, memberId, conceptId, period: "2027-04", amountCents: 500 } });
+    const secondCharge = await prisma.charge.create({ data: { dedupeKey: `multipart-b-${suffix}`, memberId: second.id, conceptId, period: "2027-04", amountCents: 500 } });
+    const parkingCharge = await prisma.charge.create({ data: { dedupeKey: `multipart-p-${suffix}`, memberId: second.id, conceptId: parking.id, period: "2027-04", amountCents: 200 } });
+    const movement = await registerAndAllocatePayment({
+      accountId,
+      amountCents: 1_200,
+      occurredAt: new Date(),
+      idempotencyKey: suffix,
+      parts: [
+        { memberId, amountCents: 500, allocations: [{ chargeId: firstCharge.id, amountCents: 500 }] },
+        { memberId: second.id, amountCents: 700, allocations: [{ chargeId: secondCharge.id, amountCents: 500 }, { chargeId: parkingCharge.id, amountCents: 200 }] },
+      ],
+    }, actorId);
+    expect(await prisma.moneyMovement.count({ where: { id: movement.id, amountCents: 1_200 } })).toBe(1);
+    expect(await prisma.paymentPart.count({ where: { movementId: movement.id } })).toBe(2);
+    expect((await prisma.allocation.aggregate({ where: { paymentPart: { movementId: movement.id } }, _sum: { amountCents: true } }))._sum.amountCents).toBe(1_200);
   });
 });

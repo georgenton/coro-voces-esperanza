@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { AppRole } from "@/generated/prisma/client";
 import { requireAccess } from "@/lib/access";
 import { prisma } from "@/lib/db";
+import { replaceUserAccess } from "@/server/auth/access";
 
 function safe(error: unknown) { return error instanceof Error ? error.message.slice(0, 180) : "No se guardó la configuración."; }
 
@@ -35,16 +36,8 @@ export async function setUserAccessAction(formData: FormData) {
     const userId = String(formData.get("userId") ?? "");
     const roles = formData.getAll("roles").map(String) as AppRole[];
     const sectionIds = formData.getAll("sectionIds").map(String);
-    if (!roles.length || roles.some((role) => !Object.values(AppRole).includes(role))) throw new Error("Selecciona al menos un rol válido.");
     if (userId === access.userId && !roles.includes(AppRole.SUPERADMIN)) throw new Error("No puedes retirar tu propio acceso SUPERADMIN.");
-    await prisma.$transaction(async (tx) => {
-      await tx.userRole.deleteMany({ where: { userId } });
-      await tx.userRole.createMany({ data: roles.map((role) => ({ userId, role })), skipDuplicates: true });
-      await tx.userSectionScope.deleteMany({ where: { userId } });
-      if (roles.includes(AppRole.JEFE_DE_CUERDA) && sectionIds.length) await tx.userSectionScope.createMany({ data: sectionIds.map((sectionId) => ({ userId, sectionId })), skipDuplicates: true });
-      await tx.session.deleteMany({ where: { userId } });
-      await tx.auditLog.create({ data: { actorId: access.userId, action: "USER_ACCESS_CHANGED", entityType: "User", entityId: userId, summary: "Roles y alcance de cuerda actualizados; sesiones revocadas.", metadata: { roles, sectionIds } } });
-    });
+    await replaceUserAccess({ userId, roles, sectionIds }, access.userId);
     revalidatePath("/configuracion");
   } catch (error) { target = `/configuracion?error=${encodeURIComponent(safe(error))}`; }
   redirect(target);

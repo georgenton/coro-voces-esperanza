@@ -71,3 +71,16 @@ Restaurar primero en un PostgreSQL separado, montar una copia del volumen y comp
 5. la aplicación no apunta a la base de producción durante la prueba.
 
 No se declara una restauración probada hasta ejecutar este procedimiento con un respaldo real autorizado.
+
+## 7. Evidencia del simulacro aislado
+
+El 1 de octubre de 2026 se probó la imagen local del commit `e0065642b3fff6c77ee459a1e3db9dde2358eb23` (`voces-esperanza:e006564`, digest local `sha256:8b108e710da7c8293fa7b7e267e206deffffba9033fdfc3a9cf30ddabe925684`) con PostgreSQL 17 y dos volúmenes exclusivos de prueba.
+
+- Migraciones: 3 aplicadas; health 200.
+- Datos sintéticos: 4 miembros, 1 usuario y 1 adjunto.
+- Reinicio y recreación de ambos contenedores con los mismos volúmenes: conteos y SHA-256 del adjunto sin cambios.
+- Respaldo fuera de contenedores: dump PostgreSQL custom y archivo comprimido del volumen.
+- Restauración: PostgreSQL, volumen y aplicación nuevos, sin apuntar al origen.
+- Resultado restaurado: health 200; mismos conteos; adjunto con SHA-256 `4222f014…`, propietario `1001:1001`, modo `600`; inicio de sesión sintético y descarga autorizada con `Cache-Control: private, no-store`.
+
+El respaldo del simulacro permanece en el mismo equipo; prueba el procedimiento, no resiliencia ante pérdida completa del servidor. En producción debe copiarse a almacenamiento externo aprobado y probarse periódicamente en recursos separados.

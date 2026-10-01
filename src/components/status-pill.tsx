@@ -18,6 +18,10 @@ const styles: Record<string, string> = {
   OPEN: "pill-info",
   SCHEDULED: "pill-info",
   PAUSED: "pill-info",
+  PREVIEWED: "pill-info",
+  PROMOTING: "pill-warning",
+  PROMOTED: "pill-success",
+  SUPERSEDED: "pill-danger",
 };
 
 const labels: Record<string, string> = {
@@ -42,6 +46,10 @@ const labels: Record<string, string> = {
   PAUSED: "Pausa",
   CLOSED: "Cerrado",
   CANCELLED: "Cancelado",
+  PREVIEWED: "Vista previa",
+  PROMOTING: "Promoviendo",
+  PROMOTED: "Promovido",
+  SUPERSEDED: "Invalidado",
 };
 
 export function StatusPill({ value }: { value: string }) {

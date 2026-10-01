@@ -2,11 +2,15 @@
  * Verifica el staging local. No certifica movimientos bancarios ni deuda real.
  * No imprime nombres u otros datos personales.
  */
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {classifyLegacyCell, chargeForPeriod, accountStatus} from './finance-rules.mjs';
 
 const file = new URL('../private/cuotas-2026-staging.json', import.meta.url);
+if (!existsSync(file)) {
+  console.log('OMITIDO: no existe el staging privado; solo se verificaron las reglas públicas.');
+  process.exit(0);
+}
 const data = JSON.parse(readFileSync(file,'utf8'));
 assert.equal(data.schemaVersion,1);
 assert.equal(data.members.length,37);

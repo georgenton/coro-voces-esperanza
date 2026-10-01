@@ -21,7 +21,10 @@ export async function getDashboard(access: AccessContext, cutoffPeriod: string) 
       include: { allocations: { select: { amountCents: true } }, adjustments: { select: { amountCents: true } } },
     }),
     prisma.paymentPart.findMany({
-      where: { memberId: { in: memberIds }, movement: { status: MovementStatus.CONFIRMED } },
+      where: {
+        memberId: { in: memberIds },
+        OR: [{ movement: { status: MovementStatus.CONFIRMED } }, { isLegacy: true, cashEffect: false }],
+      },
       include: { allocations: { select: { amountCents: true, charge: { select: { period: true } } } } },
     }),
     finance ? prisma.moneyMovement.findMany({ where: { status: MovementStatus.CONFIRMED } }) : Promise.resolve([]),
