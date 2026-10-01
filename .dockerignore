@@ -1,0 +1,25 @@
+# No enviar datos reales ni secretos al contexto de construcción
+private/
+uploads/
+receipts/
+backups/
+exports/
+var/
+*.xlsx
+*.xls
+*.csv
+docs/DIAGNOSTICO-EXCEL.md
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.git/
+node_modules/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.log
+.DS_Store

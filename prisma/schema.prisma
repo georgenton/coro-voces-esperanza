@@ -1,0 +1,684 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AppRole {
+  SUPERADMIN
+  ADMIN
+  TESORERIA
+  DIRECTORA
+  JEFE_DE_CUERDA
+  MIEMBRO
+}
+
+enum MemberStatus {
+  ACTIVE
+  PAUSED
+  RETIRED
+  REVIEW_REQUIRED
+}
+
+enum IncidentType {
+  JOIN
+  PAUSE
+  REENTRY
+  RETIREMENT
+  SECTION_CHANGE
+  PARKING_START
+  PARKING_END
+  EXEMPTION
+  CORRECTION
+  OPERATIONAL_NOTE
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ChargeStatus {
+  PENDING
+  PARTIAL
+  PAID
+  VOIDED
+  REVIEW_REQUIRED
+}
+
+enum MovementType {
+  PAYMENT
+  EXPENSE
+  INTEREST
+  INTERNAL_TRANSFER
+  OPENING_BALANCE
+  REVERSAL
+}
+
+enum MovementDirection {
+  IN
+  OUT
+}
+
+enum MovementStatus {
+  PENDING
+  CONFIRMED
+  REVERSED
+  REJECTED
+}
+
+enum EvidenceStatus {
+  RECEIVED
+  EXTRACTION_PENDING
+  REVIEW_REQUIRED
+  READY
+  CONFIRMED
+  POSSIBLE_DUPLICATE
+  REJECTED
+}
+
+enum ImportStatus {
+  STAGING
+  REVIEW_REQUIRED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+  CANCELLED
+  NOT_SUMMONED
+}
+
+enum RehearsalStatus {
+  SCHEDULED
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+model User {
+  id            String           @id
+  name          String
+  email         String           @unique
+  emailVerified Boolean          @default(false)
+  image         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  roles         UserRole[]
+  sectionScopes UserSectionScope[]
+  member        Member?
+  auditLogs     AuditLog[]       @relation("AuditActor")
+  incidents     MembershipIncident[] @relation("IncidentAuthor")
+  approvedIncidents MembershipIncident[] @relation("IncidentApprover")
+  invitationsCreated Invitation[] @relation("InvitationCreator")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  role      AppRole
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([role])
+}
+
+model UserSectionScope {
+  id        String       @id @default(cuid())
+  userId    String
+  sectionId String
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section   VoiceSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sectionId])
+}
+
+model VoiceSection {
+  id            String              @id @default(cuid())
+  name          String              @unique
+  sortOrder     Int                 @default(0)
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  currentMembers Member[]           @relation("CurrentSection")
+  assignments   SectionAssignment[]
+  userScopes    UserSectionScope[]
+}
+
+model Member {
+  id                  String             @id @default(cuid())
+  displayName         String
+  originalName        String?
+  normalizedName      String
+  status              MemberStatus       @default(REVIEW_REQUIRED)
+  currentSectionId    String?
+  authUserId          String?            @unique
+  joinedOn            DateTime?          @db.Date
+  leftOn              DateTime?          @db.Date
+  parkingReviewStatus ReviewStatus        @default(PENDING)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  currentSection      VoiceSection?       @relation("CurrentSection", fields: [currentSectionId], references: [id])
+  authUser            User?               @relation(fields: [authUserId], references: [id], onDelete: SetNull)
+  sectionAssignments  SectionAssignment[]
+  incidents           MembershipIncident[]
+  charges             Charge[]
+  paymentParts        PaymentPart[]
+  aliases             PayerAlias[]
+  activityParticipants ActivityParticipant[]
+  attendances         Attendance[]
+  rehearsalInvitations RehearsalInvitee[]
+
+  @@index([normalizedName])
+  @@index([currentSectionId, status])
+}
+
+model SectionAssignment {
+  id        String       @id @default(cuid())
+  memberId  String
+  sectionId String
+  startsOn  DateTime     @db.Date
+  endsOn    DateTime?    @db.Date
+  source    String?
+  createdAt DateTime     @default(now())
+  member    Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  section   VoiceSection @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
+  @@index([memberId, startsOn])
+}
+
+model MembershipIncident {
+  id                   String         @id @default(cuid())
+  memberId             String
+  type                 IncidentType
+  effectiveOn          DateTime?      @db.Date
+  economicPeriod       String?
+  status               ReviewStatus   @default(PENDING)
+  publicNote           String?
+  privateReason        String?
+  proposedChange       Json?
+  simulation           Json?
+  authorId             String
+  approvedById         String?
+  approvedAt           DateTime?
+  recordedAt           DateTime       @default(now())
+  member               Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  author               User           @relation("IncidentAuthor", fields: [authorId], references: [id])
+  approvedBy           User?          @relation("IncidentApprover", fields: [approvedById], references: [id])
+
+  @@index([memberId, status])
+  @@index([economicPeriod])
+}
+
+model BillingConcept {
+  id               String       @id @default(cuid())
+  systemKey        String       @unique
+  name             String
+  defaultAmountCents Int
+  active           Boolean      @default(true)
+  restrictedCredit Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  rules            ChargeRule[]
+  charges          Charge[]
+}
+
+model ChargeRule {
+  id             String         @id @default(cuid())
+  conceptId      String
+  startsPeriod   String
+  endsPeriod     String?
+  amountCents    Int
+  excludeJanuary Boolean        @default(false)
+  eligibility    String         @default("ACTIVE_MEMBER")
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  concept        BillingConcept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  exceptions     ChargeException[]
+  charges        Charge[]
+
+  @@index([conceptId, startsPeriod])
+}
+
+model ChargeException {
+  id          String     @id @default(cuid())
+  ruleId      String
+  memberId    String?
+  period      String
+  chargeable  Boolean
+  amountCents Int?
+  reason      String
+  createdAt   DateTime   @default(now())
+  rule        ChargeRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleId, memberId, period])
+  @@index([period])
+}
+
+model Charge {
+  id              String         @id @default(cuid())
+  dedupeKey       String         @unique
+  memberId        String
+  conceptId       String
+  ruleId          String?
+  activityId      String?
+  period          String
+  dueOn           DateTime?      @db.Date
+  amountCents     Int
+  status          ChargeStatus   @default(PENDING)
+  source          String         @default("MANUAL")
+  sourceReference String?
+  publishedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  member          Member         @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  concept         BillingConcept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  rule            ChargeRule?    @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  activity        Activity?      @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  allocations     Allocation[]
+  adjustments     ChargeAdjustment[]
+
+  @@index([memberId, period])
+  @@index([status, dueOn])
+}
+
+model ChargeAdjustment {
+  id          String   @id @default(cuid())
+  chargeId    String
+  amountCents Int
+  reason      String
+  authorId    String
+  createdAt   DateTime @default(now())
+  charge      Charge   @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+
+  @@index([chargeId])
+}
+
+model FinancialAccount {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  kind        String
+  currency    String          @default("USD")
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  movements   MoneyMovement[]
+}
+
+model MoneyMovement {
+  id                 String            @id @default(cuid())
+  dedupeKey          String?           @unique
+  accountId          String
+  type               MovementType
+  direction          MovementDirection
+  status             MovementStatus    @default(PENDING)
+  amountCents        Int
+  currency           String            @default("USD")
+  occurredAt         DateTime?
+  recordedAt         DateTime          @default(now())
+  description        String?
+  externalReference  String?
+  bankReferenceKey   String?           @unique
+  transferGroupId    String?
+  cashEffect         Boolean           @default(true)
+  source             String            @default("MANUAL")
+  reversalOfId       String?           @unique
+  confirmedAt        DateTime?
+  confirmedById      String?
+  account            FinancialAccount  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  reversalOf         MoneyMovement?     @relation("MovementReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal           MoneyMovement?     @relation("MovementReversal")
+  paymentParts       PaymentPart[]
+  attachments        Attachment[]
+  reconciliationCandidate ReconciliationCandidate?
+  activityExpenses   ActivityExpense[]
+
+  @@index([accountId, occurredAt])
+  @@index([status, type])
+  @@index([transferGroupId])
+}
+
+model PaymentPart {
+  id          String          @id @default(cuid())
+  movementId  String
+  memberId    String
+  amountCents Int
+  note        String?
+  createdAt   DateTime        @default(now())
+  movement    MoneyMovement   @relation(fields: [movementId], references: [id], onDelete: Restrict)
+  member      Member          @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  allocations Allocation[]
+
+  @@index([movementId])
+  @@index([memberId])
+}
+
+model Allocation {
+  id            String      @id @default(cuid())
+  paymentPartId String
+  chargeId      String
+  amountCents   Int
+  isLegacy      Boolean     @default(false)
+  cashEffect    Boolean     @default(true)
+  appliedAt     DateTime    @default(now())
+  paymentPart   PaymentPart @relation(fields: [paymentPartId], references: [id], onDelete: Restrict)
+  charge        Charge      @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentPartId, chargeId])
+  @@index([chargeId])
+}
+
+model Attachment {
+  id           String         @id @default(cuid())
+  movementId   String?
+  uploadedById String
+  storageKey   String         @unique
+  originalName String
+  contentType  String
+  sizeBytes    Int
+  sha256       String
+  status       EvidenceStatus @default(RECEIVED)
+  createdAt    DateTime       @default(now())
+  movement     MoneyMovement? @relation(fields: [movementId], references: [id], onDelete: Restrict)
+  candidateLinks CandidateAttachment[]
+
+  @@index([sha256])
+  @@index([uploadedById, createdAt])
+}
+
+model ReconciliationBatch {
+  id          String                    @id @default(cuid())
+  name        String
+  status      ReviewStatus              @default(PENDING)
+  createdById String
+  createdAt   DateTime                  @default(now())
+  approvedAt  DateTime?
+  candidates  ReconciliationCandidate[]
+}
+
+model ReconciliationCandidate {
+  id                String              @id @default(cuid())
+  batchId           String
+  status            EvidenceStatus      @default(RECEIVED)
+  direction         MovementDirection?
+  amountCents       Int?
+  currency          String?
+  occurredAt        DateTime?
+  externalReference String?
+  payerName         String?
+  destinationMasked String?
+  extraction        Json?
+  reviewNote        String?
+  movementId        String?             @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  batch             ReconciliationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  movement          MoneyMovement?      @relation(fields: [movementId], references: [id], onDelete: Restrict)
+  attachments       CandidateAttachment[]
+
+  @@index([batchId, status])
+  @@index([occurredAt, amountCents])
+}
+
+model CandidateAttachment {
+  candidateId  String
+  attachmentId String
+  candidate    ReconciliationCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  attachment   Attachment              @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+
+  @@id([candidateId, attachmentId])
+}
+
+model PayerAlias {
+  id              String   @id @default(cuid())
+  normalizedValue String
+  originalValue   String
+  memberId        String
+  approvedById    String
+  approvedAt      DateTime @default(now())
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([normalizedValue, memberId])
+  @@index([normalizedValue])
+}
+
+model Activity {
+  id                 String                @id @default(cuid())
+  name               String
+  description        String?
+  startsOn           DateTime?             @db.Date
+  endsOn             DateTime?             @db.Date
+  participantAmountCents Int?
+  status             String                @default("DRAFT")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  charges            Charge[]
+  participants       ActivityParticipant[]
+  expenses           ActivityExpense[]
+}
+
+model ActivityParticipant {
+  activityId String
+  memberId   String
+  enrolledAt DateTime @default(now())
+  note       String?
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@id([activityId, memberId])
+}
+
+model ActivityExpense {
+  id         String        @id @default(cuid())
+  activityId String
+  movementId String
+  amountCents Int
+  activity   Activity      @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  movement   MoneyMovement @relation(fields: [movementId], references: [id], onDelete: Restrict)
+
+  @@unique([activityId, movementId])
+}
+
+model Rehearsal {
+  id                 String          @id @default(cuid())
+  title              String
+  startsAt           DateTime
+  endsAt             DateTime
+  checkInOpensAt     DateTime
+  checkInClosesAt    DateTime
+  lateAfterMinutes   Int             @default(15)
+  tokenTtlSeconds    Int             @default(60)
+  status             RehearsalStatus @default(SCHEDULED)
+  recurrenceKey      String?         @unique
+  createdById        String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  attendances        Attendance[]
+  invitees           RehearsalInvitee[]
+
+  @@index([startsAt, status])
+}
+
+model RehearsalInvitee {
+  rehearsalId String
+  memberId    String
+  createdAt   DateTime  @default(now())
+  rehearsal   Rehearsal @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@id([rehearsalId, memberId])
+  @@index([memberId])
+}
+
+model Attendance {
+  id          String           @id @default(cuid())
+  rehearsalId String
+  memberId    String
+  status      AttendanceStatus
+  checkedInAt DateTime?
+  source      String
+  note        String?
+  recordedById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  rehearsal   Rehearsal        @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  member      Member           @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@unique([rehearsalId, memberId])
+  @@index([memberId, status])
+}
+
+model ImportBatch {
+  id              String       @id @default(cuid())
+  sha256          String       @unique
+  originalName    String
+  storageKey      String       @unique
+  sizeBytes       Int
+  status          ImportStatus @default(STAGING)
+  sheetCount      Int
+  importedById    String
+  createdAt       DateTime     @default(now())
+  approvedAt      DateTime?
+  summary         Json?
+  rows            ImportRow[]
+  issues          ImportIssue[]
+}
+
+model ImportRow {
+  id               String      @id @default(cuid())
+  batchId          String
+  sheetName        String
+  rowNumber        Int
+  cellReference    String?
+  rawText          String?
+  recordFingerprint String
+  proposedType     String?
+  transformed      Json?
+  status           ReviewStatus @default(PENDING)
+  batch            ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, sheetName, rowNumber, recordFingerprint])
+  @@index([batchId, status])
+}
+
+model ImportIssue {
+  id            String      @id @default(cuid())
+  batchId       String
+  code          String
+  sheetName     String?
+  cellReference String?
+  message       String
+  status        ReviewStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+  batch         ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId, status])
+}
+
+model Invitation {
+  id          String   @id @default(cuid())
+  email       String
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdById String
+  memberId    String?
+  role        AppRole  @default(MIEMBRO)
+  createdAt   DateTime @default(now())
+  createdBy   User     @relation("InvitationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([email, expiresAt])
+}
+
+model IdempotencyKey {
+  id        String   @id @default(cuid())
+  scope     String
+  key       String
+  resultId  String?
+  createdAt DateTime @default(now())
+
+  @@unique([scope, key])
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedById String
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}

@@ -1,0 +1,28 @@
+# Datos reales y privados
+private/
+*.xlsx
+*.xls
+*.csv
+uploads/
+receipts/
+backups/
+exports/
+var/
+docs/DIAGNOSTICO-EXCEL.md
+# Secretos y entorno
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Node / compilación / informes de pruebas
+node_modules/
+src/generated/prisma/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
+.DS_Store

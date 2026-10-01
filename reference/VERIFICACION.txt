@@ -1,0 +1,243 @@
+TAP version 13
+# Subtest: 5.00 USD son 500 centavos
+ok 1 - 5.00 USD son 500 centavos
+  ---
+  duration_ms: 1.149715
+  type: 'test'
+  ...
+# Subtest: acepta coma decimal y un decimal
+ok 2 - acepta coma decimal y un decimal
+  ---
+  duration_ms: 0.186021
+  type: 'test'
+  ...
+# Subtest: rechaza precisión mayor a dos decimales
+ok 3 - rechaza precisión mayor a dos decimales
+  ---
+  duration_ms: 0.274884
+  type: 'test'
+  ...
+# Subtest: rechaza negativos y valores no textuales
+ok 4 - rechaza negativos y valores no textuales
+  ---
+  duration_ms: 0.107202
+  type: 'test'
+  ...
+# Subtest: rechaza entero monetario fuera del rango seguro
+ok 5 - rechaza entero monetario fuera del rango seguro
+  ---
+  duration_ms: 0.999448
+  type: 'test'
+  ...
+# Subtest: vacío no es deuda ni pago
+ok 6 - vacío no es deuda ni pago
+  ---
+  duration_ms: 0.853498
+  type: 'test'
+  ...
+# Subtest: X mensual propone exención histórica
+ok 7 - X mensual propone exención histórica
+  ---
+  duration_ms: 0.093401
+  type: 'test'
+  ...
+# Subtest: X en deuda anterior no significa pausa
+ok 8 - X en deuda anterior no significa pausa
+  ---
+  duration_ms: 0.151198
+  type: 'test'
+  ...
+# Subtest: 5 histórico de parqueadero se conserva en 500
+ok 9 - 5 histórico de parqueadero se conserva en 500
+  ---
+  duration_ms: 0.236557
+  type: 'test'
+  ...
+# Subtest: cero registrado no es un pago positivo
+ok 10 - cero registrado no es un pago positivo
+  ---
+  duration_ms: 0.354966
+  type: 'test'
+  ...
+# Subtest: texto no monetario se rechaza para revisión
+ok 11 - texto no monetario se rechaza para revisión
+  ---
+  duration_ms: 0.236407
+  type: 'test'
+  ...
+# Subtest: febrero activo genera 500
+ok 12 - febrero activo genera 500
+  ---
+  duration_ms: 0.269777
+  type: 'test'
+  ...
+# Subtest: enero se excluye
+ok 13 - enero se excluye
+  ---
+  duration_ms: 0.106931
+  type: 'test'
+  ...
+# Subtest: junio 2026 exento no exime junio 2027
+ok 14 - junio 2026 exento no exime junio 2027
+  ---
+  duration_ms: 0.087592
+  type: 'test'
+  ...
+# Subtest: pausa aprobada no genera cargo
+ok 15 - pausa aprobada no genera cargo
+  ---
+  duration_ms: 0.05949
+  type: 'test'
+  ...
+# Subtest: vigencia desconocida queda pendiente
+ok 16 - vigencia desconocida queda pendiente
+  ---
+  duration_ms: 0.054572
+  type: 'test'
+  ...
+# Subtest: período inválido se rechaza
+ok 17 - período inválido se rechaza
+  ---
+  duration_ms: 0.068103
+  type: 'test'
+  ...
+# Subtest: al día este año puede tener deuda acumulada
+ok 18 - al día este año puede tener deuda acumulada
+  ---
+  duration_ms: 0.114142
+  type: 'test'
+  ...
+# Subtest: deudas se suman pero no se convierten en ingresos
+ok 19 - deudas se suman pero no se convierten en ingresos
+  ---
+  duration_ms: 0.062845
+  type: 'test'
+  ...
+# Subtest: un depósito 12 admite cuotas 5+5 y parqueadero 2
+ok 20 - un depósito 12 admite cuotas 5+5 y parqueadero 2
+  ---
+  duration_ms: 0.217558
+  type: 'test'
+  ...
+# Subtest: remanente no identificado queda explícito
+ok 21 - remanente no identificado queda explícito
+  ---
+  duration_ms: 0.073772
+  type: 'test'
+  ...
+# Subtest: remanente identificado queda como crédito
+ok 22 - remanente identificado queda como crédito
+  ---
+  duration_ms: 0.069425
+  type: 'test'
+  ...
+# Subtest: no repartir más que el depósito
+ok 23 - no repartir más que el depósito
+  ---
+  duration_ms: 0.145089
+  type: 'test'
+  ...
+# Subtest: no aplicar a otro miembro
+ok 24 - no aplicar a otro miembro
+  ---
+  duration_ms: 0.11297
+  type: 'test'
+  ...
+# Subtest: suma de partes no puede sobreaplicar un cargo
+ok 25 - suma de partes no puede sobreaplicar un cargo
+  ---
+  duration_ms: 0.094182
+  type: 'test'
+  ...
+# Subtest: no aplicar más que la parte aun con saldo de cargo suficiente
+ok 26 - no aplicar más que la parte aun con saldo de cargo suficiente
+  ---
+  duration_ms: 0.21203
+  type: 'test'
+  ...
+# Subtest: tildes y espacios permiten solo propuesta inequívoca
+ok 27 - tildes y espacios permiten solo propuesta inequívoca
+  ---
+  duration_ms: 1.423718
+  type: 'test'
+  ...
+# Subtest: nombre aproximado no asigna automáticamente
+ok 28 - nombre aproximado no asigna automáticamente
+  ---
+  duration_ms: 0.088834
+  type: 'test'
+  ...
+# Subtest: alias no aprobado no identifica
+ok 29 - alias no aprobado no identifica
+  ---
+  duration_ms: 0.083606
+  type: 'test'
+  ...
+# Subtest: alias aprobado sugiere, no confirma pago
+ok 30 - alias aprobado sugiere, no confirma pago
+  ---
+  duration_ms: 0.178269
+  type: 'test'
+  ...
+# Subtest: dos identidades exactas quedan ambiguas
+ok 31 - dos identidades exactas quedan ambiguas
+  ---
+  duration_ms: 0.136155
+  type: 'test'
+  ...
+# Subtest: misma referencia y cuenta generan clave estable
+ok 32 - misma referencia y cuenta generan clave estable
+  ---
+  duration_ms: 1.008662
+  type: 'test'
+  ...
+# Subtest: misma referencia en cuentas distintas no se confunde
+ok 33 - misma referencia en cuentas distintas no se confunde
+  ---
+  duration_ms: 0.111538
+  type: 'test'
+  ...
+# Subtest: sin referencia no hay bloqueo duro por monto o fecha
+ok 34 - sin referencia no hay bloqueo duro por monto o fecha
+  ---
+  duration_ms: 0.05284
+  type: 'test'
+  ...
+# Subtest: transferencia interna no afecta flujo externo e interés sí
+ok 35 - transferencia interna no afecta flujo externo e interés sí
+  ---
+  duration_ms: 0.139931
+  type: 'test'
+  ...
+# Subtest: evidencia pendiente no se cuenta como dinero confirmado
+ok 36 - evidencia pendiente no se cuenta como dinero confirmado
+  ---
+  duration_ms: 0.058939
+  type: 'test'
+  ...
+# Subtest: entrada 10 menos gasto 4 producen flujo externo 6
+ok 37 - entrada 10 menos gasto 4 producen flujo externo 6
+  ---
+  duration_ms: 0.054512
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 83.098279
+
+--- Verificación de staging ---
+OK: 37 filas de staging verificadas, sin publicar datos personales.
+OK: 880 = 730 + 150; deuda provisional 155 + 295 = 450 USD.
+OK: 13 pendientes del año frente a 14 con deuda acumulada.
+ADVERTENCIA: hipótesis del informe; NO conciliación bancaria ni aprobación de saldos.
+
+--- Entorno ---
+v22.16.0
+Fecha: 2026-10-01
+Alcance: reglas puras y datos provisionales; no plataforma web, DB, QR ni despliegue.
