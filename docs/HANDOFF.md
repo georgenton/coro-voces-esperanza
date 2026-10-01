@@ -31,4 +31,7 @@ No se promovió, aprobó ni publicó ningún saldo, identidad, fecha o pago real
 
 ## Verificación y operación
 
-Los resultados finales, commit/PR, CI, imagen, URL HTTPS, simulacro de persistencia/restauración y recursos Coolify se completan al cierre de esta misma sesión. Hasta entonces, este documento no acredita despliegue ni aceptación operativa.
+- 25 pruebas unitarias, 37 de referencia, 11 de integración PostgreSQL y 6 E2E Docker pasaron localmente.
+- La imagen del commit funcional es `voces-esperanza:e006564`, digest local `sha256:8b108e710da7c8293fa7b7e267e206deffffba9033fdfc3a9cf30ddabe925684`.
+- Persistencia y restauración pasaron con datos y adjunto sintéticos en recursos separados; ver `docs/DEPLOY-COOLIFY.md`.
+- La URL, commit final, PR/CI y recursos Coolify se completan al cierre de esta misma sesión. Hasta entonces, este documento no acredita publicación externa.

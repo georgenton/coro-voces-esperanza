@@ -59,8 +59,8 @@ Fecha de ejecución: 1 de octubre de 2026, `America/Guayaquil`. Los datos de pru
 | C40 | QR compartido sin sesión | E | PASS | Pantalla privada redirige a acceso individual; no existe selector público de nombres. |
 | C41 | Registro manual autorizado | inspección | PARCIAL | Acción auditada por rol/cuerda implementada; falta E2E sin teléfono. |
 | C42 | Cancelado/no convocado/pausado | inspección | PARCIAL | Cierre filtra convocatoria/estado; falta matriz integrada de porcentajes. |
-| C43 | Reinicio conserva DB y adjunto | P | PENDIENTE | Se completa en el simulacro aislado de persistencia. |
-| C44 | Restauración separada | P | PENDIENTE | Se completa con base y volumen nuevos, sin tocar producción. |
+| C43 | Reinicio conserva DB y adjunto | P | PASS | Reinicio y recreación conservaron 4 miembros, 1 usuario, 1 adjunto y SHA-256 `4222f014…`; archivo 1001:1001 modo 600. |
+| C44 | Restauración separada | P | PASS | Dump y volumen restaurados en DB/app/volúmenes nuevos: salud 200, mismos conteos, 3 migraciones y descarga autenticada `private, no-store` con hash idéntico. |
 | C45 | Falta configuración esencial | B | PASS | Validación de entorno y Compose fallan de forma segura; no hay credenciales demo. |
 | C46 | Cambiar corte no mezcla caja/períodos | inspección | PARCIAL | Dashboard filtra cargos por período y caja por movimientos; falta prueba de frontera automatizada. |
 | C47 | Compra de actividad y recuperación | I | PASS | Gasto enlazado y movimientos separados; transferencia interna no duplica ingreso. |
@@ -70,4 +70,4 @@ Fecha de ejecución: 1 de octubre de 2026, `America/Guayaquil`. Los datos de pru
 
 ## Lectura del resultado
 
-Los criterios `PARCIAL` no bloquean la construcción o el despliegue técnico con migración real deshabilitada, pero sí bloquean declarar aceptación operativa completa. Los criterios C43 y C44 deben cambiar a `PASS` únicamente con evidencia del simulacro aislado. Los comprobantes reales y los datos históricos permanecen fuera de CI y fuera de Git.
+Los criterios `PARCIAL` no bloquean la construcción o el despliegue técnico con migración real deshabilitada, pero sí bloquean declarar aceptación operativa completa. C43 y C44 pasaron con datos sintéticos en recursos aislados; esto no sustituye un respaldo externo del entorno productivo. Los comprobantes reales y los datos históricos permanecen fuera de CI y fuera de Git.

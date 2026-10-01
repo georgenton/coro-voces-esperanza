@@ -26,10 +26,11 @@ Fecha de corte: 1 de octubre de 2026.
 
 - `pnpm verify`: lint, tipos, pruebas unitarias y build productivo.
 - Pruebas unitarias: reglas financieras, distribución, QR, normalización, lectura XLSX y alcance por objeto.
-- `pnpm verify:reference`: 37 pruebas del paquete de referencia y contraste no nominativo del staging.
+- `pnpm verify:reference`: 37 pruebas del paquete de referencia y, cuando existe localmente, contraste no nominativo del staging. CI omite de forma explícita ese segundo paso porque `private/` no se versiona.
 - `pnpm test:integration`: migración real en PostgreSQL 17 y pruebas de pago idempotente, QR concurrente, transferencia/ahorro/interés/gasto, distribución posterior, reverso, invitación de un uso, revocación de sesión, concurrencia de cargos/pagos, reimportación y promoción LEGACY concurrente sin caja.
 - `pnpm test:e2e`: escritorio y móvil; redirección de pantalla privada, bloqueo de autorregistro, bloqueo de adjuntos anónimos y ausencia de desborde horizontal.
 - Construcción de imagen Docker y arranque real: migraciones sin pendientes y `/api/health` saludable.
+- Simulacro aislado de persistencia y restauración: reinicio y recreación conservaron PostgreSQL y el adjunto; dump/volumen se restauraron en recursos nuevos con los mismos conteos, hash, propietario/modo y descarga autenticada sin caché compartida.
 
 ## Pendiente de evidencia o decisión humana
 
@@ -37,6 +38,6 @@ Fecha de corte: 1 de octubre de 2026.
 - La transformación definitiva ya está implementada, pero ningún dato real fue aprobado ni promovido. Revertir una importación ya usada por operaciones posteriores sigue requiriendo ajustes/reversos auditados, no borrado.
 - No se probaron comprobantes bancarios reales ni el proveedor de visión; sin clave, el flujo manual permanece funcional.
 - La matriz C01–C50 está documentada. Persisten coberturas parciales que requieren E2E autenticado por rol, comprobantes reales aprobados y validación operativa; ver `docs/MATRIZ-C01-C50.md`.
-- No se desplegó producción, no se configuró el dominio y no se cambió DNS. La guía de Coolify es preparación, no evidencia de publicación.
+- El estado de despliegue, URL, commit e imagen se registra en `docs/DEPLOY-COOLIFY.md`; la migración histórica real continúa bloqueada hasta aprobación humana.
 
-No se afirma conciliación bancaria, saldos aprobados, restauración probada ni despliegue productivo.
+No se afirma conciliación bancaria, saldos aprobados, respaldo externo probado ni aceptación operativa completa.
