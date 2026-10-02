@@ -5,13 +5,14 @@ La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y 
 ## Estado de producción verificado
 
 - Proyecto Coolify: `Voces de Esperanza` (`curszcfgrj5qgqoalyjpjfx1`), entorno `production` (`hqjrkmlxe1xybokuktovevmb`).
-- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, commit desplegado `a6d048eb313c98f87cf726963b45b0db0922e056`.
+- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, commit desplegado `786d8aafe2636f890ede2cb56d97ef50b9cd483e`.
 - PostgreSQL 17 privado: `voces-postgres` (`cw9lgsmko0t2rnramfsrqmrm`), base `voces_esperanza`, sin puerto público.
 - Volumen de adjuntos: `qwag6glb0gc6jfzlfwa46fi4-voces-uploads` en `/data/uploads`.
 - HTTPS externo: `/api/health` respondió 200 con `{"status":"healthy"}`, `Cache-Control: no-store` y `X-Robots-Tag: noindex, nofollow`.
 - Migraciones: 3 aplicadas; `prisma migrate status` confirmó que el esquema está al día.
 - Inicio seguro: 8 cuerdas, 4 conceptos y 3 cuentas base; 0 miembros, 0 usuarios, 0 partes de pago, 0 aplicaciones y 0 movimientos.
 - La imagen final incluye `curl` para el healthcheck interno de Coolify. El primer intento sin esa dependencia falló de forma segura y Coolify retiró el contenedor no saludable; el segundo quedó `healthy`.
+- El PR 4 añadió el bootstrap interactivo del SUPERADMIN. Coolify desplegó el merge `786d8aa` en 3m48s con estado `Success`; después `/api/health` respondió 200 por HTTPS con `no-store` y `noindex`.
 
 ## 1. Recursos
 
