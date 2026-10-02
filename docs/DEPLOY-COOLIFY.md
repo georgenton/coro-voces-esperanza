@@ -39,13 +39,15 @@ La aplicación falla de forma segura si faltan base de datos o secretos. No hay 
 
 El contenedor usa Node.js 24.21.0, compila salida standalone y ejecuta `prisma migrate deploy` antes de iniciar `server.js`. El usuario del proceso no es root.
 
-El primer acceso SUPERADMIN se crea desde una consola temporal del mismo entorno, únicamente cuando la identidad haya sido aprobada:
+El primer acceso SUPERADMIN se crea desde la consola privada del contenedor, únicamente cuando la identidad haya sido aprobada:
 
 ```bash
-SEED_ADMIN_NAME='nombre-aprobado' SEED_ADMIN_EMAIL='correo-aprobado' SEED_ADMIN_PASSWORD='contraseña-larga-temporal' ./node_modules/.bin/tsx prisma/seed.ts
+./node_modules/.bin/tsx prisma/bootstrap-admin.ts
 ```
 
-No registrar la contraseña en Git, documentación, Notion ni tickets. El seed nunca lee `private/` y los miembros ficticios están desactivados salvo que `SEED_SYNTHETIC_DATA=true` se configure explícitamente; no habilitarlo en producción. Al cierre técnico, el SUPERADMIN inicial sigue pendiente de nombre y correo aprobados.
+El comando solicita nombre y correo, comprueba el estado actual y solo entonces pide dos veces una contraseña de 12 a 128 caracteres sin mostrarla. La contraseña no viaja en argumentos, variables persistentes ni historial. Si la misma cuenta ya está activa, conserva contraseña y sesiones; si existe otra cuenta SUPERADMIN o el correo ya pertenece a una cuenta sin ese rol, termina sin elevar ni modificar usuarios. Nunca crea una ficha de miembro.
+
+No registrar la contraseña en Git, documentación, Notion, tickets, capturas o trazas. El seed nunca lee `private/` y los miembros ficticios están desactivados salvo que `SEED_SYNTHETIC_DATA=true` se configure explícitamente; no habilitarlo en producción.
 
 ## 4. Dominio y proxy
 

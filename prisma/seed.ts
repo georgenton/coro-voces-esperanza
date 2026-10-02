@@ -1,8 +1,9 @@
 import "dotenv/config";
-import { AppRole, MemberStatus } from "../src/generated/prisma/client";
-import { auth } from "../src/lib/auth";
+import { MemberStatus } from "../src/generated/prisma/client";
 import { prisma } from "../src/lib/db";
 import { normalizeName } from "../src/lib/names";
+import { createInitialAdmin, inspectInitialAdmin } from "../src/server/auth/initial-admin";
+import { describeInitialAdminConflict } from "../src/server/auth/initial-admin-policy";
 
 async function seedCatalogs() {
   const sectionNames = ["Soprano 1", "Soprano 2", "Contralto 1", "Contralto 2", "Tenor 1", "Tenor 2", "Bajo", "Barítono"];
@@ -70,17 +71,17 @@ async function seedAdmin() {
     console.log("Catálogos listos. Define SEED_ADMIN_NAME, SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD para crear el acceso inicial.");
     return;
   }
-  if (!email || !password || !name) throw new Error("El acceso inicial requiere nombre, correo y contraseña explícitos.");
-  if (password.length < 12) throw new Error("SEED_ADMIN_PASSWORD debe tener al menos 12 caracteres.");
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  let userId = existingUser?.id;
-  if (!userId) {
-    const created = await auth.api.signUpEmail({ body: { email, password, name } });
-    userId = created.user.id;
-    await prisma.user.update({ where: { id: userId }, data: { emailVerified: true } });
+  if (!email || !name) throw new Error("El acceso inicial requiere nombre y correo explícitos.");
+  const state = await inspectInitialAdmin(email);
+  if (state.kind === "ACTIVE") {
+    console.log("La cuenta SUPERADMIN inicial ya estaba activa. No se modificaron contraseña ni sesiones.");
+    return;
   }
-  await prisma.userRole.upsert({ where: { userId_role: { userId, role: AppRole.SUPERADMIN } }, update: {}, create: { userId, role: AppRole.SUPERADMIN } });
-  console.log(`Acceso inicial SUPERADMIN listo para ${email}.`);
+  const conflict = describeInitialAdminConflict(state);
+  if (conflict) throw new Error(conflict);
+  if (!password) throw new Error("El acceso inicial nuevo requiere una contraseña explícita.");
+  await createInitialAdmin({ email, password, name });
+  console.log("Acceso inicial SUPERADMIN creado.");
 }
 
 async function main() {

@@ -20,6 +20,7 @@ Fecha de corte: 1 de octubre de 2026.
 - Ensayos, convocatorias, QR firmado y temporal, identidad autenticada, ventana de registro, cierre con ausencias y corrección manual auditada.
 - Archivos privados fuera de `public/`, descargas autorizadas, CSV de cuotas neutralizado contra fórmulas y cabeceras sin caché compartida.
 - Docker multi-stage no root, migraciones al arranque, healthcheck, Compose y guía para Coolify.
+- Bootstrap privado e interactivo del primer SUPERADMIN: contraseña oculta fuera de argumentos e historial, conservación idempotente de contraseña/sesiones, bloqueo ante otra administración o una identidad conflictiva y ninguna ficha de miembro implícita.
 - Workflow de GitHub Actions para lint, tipos, unitarias, reglas de referencia, migraciones PostgreSQL, integración, build, E2E y construcción Docker con fixtures sintéticos.
 
 ## Evidencia ejecutada
@@ -27,7 +28,7 @@ Fecha de corte: 1 de octubre de 2026.
 - `pnpm verify`: lint, tipos, pruebas unitarias y build productivo.
 - Pruebas unitarias: reglas financieras, distribución, QR, normalización, lectura XLSX y alcance por objeto.
 - `pnpm verify:reference`: 37 pruebas del paquete de referencia y, cuando existe localmente, contraste no nominativo del staging. CI omite de forma explícita ese segundo paso porque `private/` no se versiona.
-- `pnpm test:integration`: migración real en PostgreSQL 17 y pruebas de pago idempotente, QR concurrente, transferencia/ahorro/interés/gasto, distribución posterior, reverso, invitación de un uso, revocación de sesión, concurrencia de cargos/pagos, reimportación y promoción LEGACY concurrente sin caja.
+- `pnpm test:integration`: migración real en PostgreSQL 17 y pruebas de pago idempotente, QR concurrente, transferencia/ahorro/interés/gasto, distribución posterior, reverso, invitación de un uso, revocación de sesión, concurrencia de cargos/pagos, reimportación, promoción LEGACY concurrente sin caja y bootstrap idempotente del SUPERADMIN.
 - `pnpm test:e2e`: escritorio y móvil; redirección de pantalla privada, bloqueo de autorregistro, bloqueo de adjuntos anónimos y ausencia de desborde horizontal.
 - Construcción de imagen Docker y arranque real: migraciones sin pendientes y `/api/health` saludable.
 - Simulacro aislado de persistencia y restauración: reinicio y recreación conservaron PostgreSQL y el adjunto; dump/volumen se restauraron en recursos nuevos con los mismos conteos, hash, propietario/modo y descarga autenticada sin caché compartida.
@@ -41,7 +42,7 @@ Fecha de corte: 1 de octubre de 2026.
 - El Excel real no se publicó en la base operativa. Solo se inspeccionó en modo lectura; identidades, fechas, saldos de apertura, marcas y aplicaciones requieren revisión y aprobación humana.
 - La transformación definitiva ya está implementada, pero ningún dato real fue aprobado ni promovido. Revertir una importación ya usada por operaciones posteriores sigue requiriendo ajustes/reversos auditados, no borrado.
 - No se probaron comprobantes bancarios reales ni el proveedor de visión; sin clave, el flujo manual permanece funcional.
-- Falta el nombre y correo aprobados del SUPERADMIN inicial. No se creó una identidad ni contraseña provisional.
+- La identidad del SUPERADMIN inicial ya fue aprobada y se mantiene fuera del repositorio. La cuenta sigue pendiente de que su titular defina la contraseña directamente en la consola privada; no existe contraseña provisional.
 - Falta configurar almacenamiento externo para copias y ejecutar un simulacro de restauración usando un respaldo real de producción en un host separado.
 - La matriz C01–C50 está documentada. Persisten coberturas parciales que requieren E2E autenticado por rol, comprobantes reales aprobados y validación operativa; ver `docs/MATRIZ-C01-C50.md`.
 - El estado de despliegue, URL, commit e imagen se registra en `docs/DEPLOY-COOLIFY.md`; la migración histórica real continúa bloqueada hasta aprobación humana.
