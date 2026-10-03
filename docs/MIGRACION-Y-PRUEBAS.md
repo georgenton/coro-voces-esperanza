@@ -6,7 +6,7 @@ Fecha real de movimiento, fecha de registro, período al que se aplica y fecha d
 Mantener libro de caja por cuenta y libro de obligaciones/aplicaciones por miembro. Una aplicación histórica sin movimiento verificable no crea dinero en caja.
 
 ## 2. Estrategia inicial: histórico + apertura aprobada + actividad nueva
-El corte 31-08-2026 es una propuesta porque existe ese informe, no una conciliación aprobada. La matriz puede haber sido actualizada después: sus columnas futuras no prueban que los pagos fueran recibidos antes del corte.
+La fuente revisada declara corte inclusivo `2026-10-01`, `America/Guayaquil`, y octubre de 2026 es parcial. Ese corte describe la cobertura documental, no una conciliación bancaria aprobada. La matriz puede haber sido actualizada después: sus columnas futuras no prueban que los pagos fueran recibidos antes del corte.
 
 1. Leer el original sin ejecutarle macros ni enlaces; preservar hash, hojas y valores/formulas. Limitar tamaño de archivo y expansión del ZIP XLSX.
 2. Crear un lote de staging; sin publicar deudas, crear cobros o mover dinero.

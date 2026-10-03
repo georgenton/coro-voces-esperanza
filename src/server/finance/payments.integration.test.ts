@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import ExcelJS from "exceljs";
 import { beforeAll, describe, expect, it } from "vitest";
+import { AppRole } from "@/generated/prisma/client";
 import { createAttendanceToken } from "@/server/attendance/tokens";
 import { checkInWithToken } from "@/server/attendance/service";
 import { prisma } from "@/lib/db";
@@ -17,6 +18,8 @@ import {
   saveImportRowMapping,
   stageWorkbook,
 } from "@/server/imports/service";
+import { getAnnualDuesReport } from "@/server/reports/annual-dues";
+import { getMonthlyAccountReport } from "@/server/reports/monthly-account";
 
 describe("integración PostgreSQL", () => {
   let actorId: string;
@@ -158,6 +161,10 @@ describe("integración PostgreSQL", () => {
     expect(first.duplicate).toBe(false);
     expect(second.duplicate).toBe(true);
     expect(second.batch.id).toBe(first.batch.id);
+    expect(first.preview).toMatchObject({ sheetCount: 2 });
+    expect(await prisma.importSheet.count({ where: { batchId: first.batch.id } })).toBe(2);
+    expect(await prisma.importRow.count({ where: { batchId: first.batch.id } })).toBe(2);
+    expect(await prisma.importCell.count({ where: { batchId: first.batch.id } })).toBe(4);
   });
 
   it("C28 revierte el pago, elimina sus aplicaciones y reabre el cargo", async () => {
@@ -271,5 +278,44 @@ describe("integración PostgreSQL", () => {
     expect(await prisma.moneyMovement.count({ where: { id: movement.id, amountCents: 1_200 } })).toBe(1);
     expect(await prisma.paymentPart.count({ where: { movementId: movement.id } })).toBe(2);
     expect((await prisma.allocation.aggregate({ where: { paymentPart: { movementId: movement.id } }, _sum: { amountCents: true } }))._sum.amountCents).toBe(1_200);
+  });
+
+  it("los reportes comparten la operación y respetan el alcance de jefe de cuerda", async () => {
+    const suffix = randomUUID();
+    const reportAccount = await prisma.financialAccount.create({ data: { name: `Cuenta reporte ${suffix}`, kind: "BANK" } });
+    await prisma.moneyMovement.createMany({ data: [
+      { accountId: reportAccount.id, type: "PAYMENT", direction: "IN", status: "CONFIRMED", amountCents: 2_000, occurredAt: new Date("2026-01-15T12:00:00-05:00"), description: "Apertura calculada sintética" },
+      { accountId: reportAccount.id, type: "PAYMENT", direction: "IN", status: "CONFIRMED", amountCents: 1_000, occurredAt: new Date("2026-02-10T12:00:00-05:00"), description: "Entrada sintética" },
+      { accountId: reportAccount.id, type: "EXPENSE", direction: "OUT", status: "CONFIRMED", amountCents: 400, occurredAt: new Date("2026-02-20T12:00:00-05:00"), description: "Salida sintética" },
+    ] });
+    const monthly = await getMonthlyAccountReport({ period: "2026-02", accountId: reportAccount.id, paginate: false });
+    expect(monthly.periodTotals).toEqual({ openingCents: 2_000, entriesCents: 1_000, exitsCents: 400, closingCents: 2_600 });
+    expect(monthly.coverageState).toBe("WITH_MOVEMENTS");
+
+    const member = await prisma.member.findUniqueOrThrow({ where: { id: memberId }, select: { currentSectionId: true } });
+    const monthlyConcept = await prisma.billingConcept.upsert({
+      where: { systemKey: "MONTHLY_DUES" },
+      create: { systemKey: "MONTHLY_DUES", name: "Cuota mensual", defaultAmountCents: 500 },
+      update: {},
+    });
+    const reportCharge = await prisma.charge.create({ data: { dedupeKey: `report-charge-${suffix}`, memberId, conceptId: monthlyConcept.id, period: "2026-09", amountCents: 500 } });
+    await prisma.paymentPart.create({ data: {
+      memberId,
+      amountCents: 500,
+      isLegacy: true,
+      cashEffect: false,
+      sourceReference: `report-part-${suffix}`,
+      allocations: { create: { chargeId: reportCharge.id, amountCents: 500, isLegacy: true, cashEffect: false } },
+    } });
+    const annual = await getAnnualDuesReport({
+      access: { userId: actorId, name: "Jefatura ficticia", email: "jefatura@example.test", roles: [AppRole.JEFE_DE_CUERDA], sectionIds: [member.currentSectionId!], memberId },
+      year: 2026,
+      cutoffPeriod: "2026-10",
+      sectionId: member.currentSectionId!,
+      paginate: false,
+    });
+    expect(annual.rows.length).toBeGreaterThan(1);
+    expect(annual.rows.every((row) => row.section?.id === member.currentSectionId)).toBe(true);
+    expect(annual.rows.find((row) => row.id === memberId)?.months[8].status).toBe("PAID");
   });
 });

@@ -1,6 +1,6 @@
 # Despliegue en Coolify
 
-La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare.
+La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare. La rama de datos e informes del 3 de octubre todavía no está desplegada.
 
 ## Estado de producción verificado
 
@@ -9,10 +9,10 @@ La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y 
 - PostgreSQL 17 privado: `voces-postgres` (`cw9lgsmko0t2rnramfsrqmrm`), base `voces_esperanza`, sin puerto público.
 - Volumen de adjuntos: `qwag6glb0gc6jfzlfwa46fi4-voces-uploads` en `/data/uploads`.
 - HTTPS externo: `/api/health` respondió 200 con `{"status":"healthy"}`, `Cache-Control: no-store` y `X-Robots-Tag: noindex, nofollow`.
-- Migraciones: 3 aplicadas; `prisma migrate status` confirmó que el esquema está al día.
-- Inicio seguro: 8 cuerdas, 4 conceptos y 3 cuentas base; 0 miembros, 0 usuarios, 0 partes de pago, 0 aplicaciones y 0 movimientos.
+- Migraciones en producción: 3 aplicadas y al día para el commit desplegado. La cuarta migración de esta rama solo se validó en PostgreSQL 17 local.
+- Estado verificado el 3 de octubre antes de desplegar esta rama: 1 usuario administrador activo, 1 sesión y 1 auditoría; 0 miembros, lotes, filas, publicaciones, cargos, partes de pago, aplicaciones y movimientos. Los catálogos base permanecen separados.
 - La imagen final incluye `curl` para el healthcheck interno de Coolify. El primer intento sin esa dependencia falló de forma segura y Coolify retiró el contenedor no saludable; el segundo quedó `healthy`.
-- El PR 4 añadió el bootstrap interactivo del SUPERADMIN. Coolify desplegó el merge `786d8aa` en 3m48s con estado `Success`; después `/api/health` respondió 200 por HTTPS con `no-store` y `noindex`.
+- El PR 4 añadió el bootstrap interactivo del SUPERADMIN. Coolify desplegó el merge `786d8aa` en 3m48s con estado `Success`; después `/api/health` respondió 200 por HTTPS con `no-store` y `noindex`. El SUPERADMIN ya fue activado en el flujo privado.
 
 ## 1. Recursos
 
@@ -40,13 +40,13 @@ La aplicación falla de forma segura si faltan base de datos o secretos. No hay 
 
 El contenedor usa Node.js 24.21.0, compila salida standalone y ejecuta `prisma migrate deploy` antes de iniciar `server.js`. El usuario del proceso no es root.
 
-El primer acceso SUPERADMIN se crea desde la consola privada del contenedor, únicamente cuando la identidad haya sido aprobada:
+Si una recuperación autorizada exige recrear el primer acceso y no existe ya un SUPERADMIN, se usa desde la consola privada del contenedor:
 
 ```bash
 ./node_modules/.bin/tsx prisma/bootstrap-admin.ts
 ```
 
-El comando solicita nombre y correo, comprueba el estado actual y solo entonces pide dos veces una contraseña de 12 a 128 caracteres sin mostrarla. La contraseña no viaja en argumentos, variables persistentes ni historial. Si la misma cuenta ya está activa, conserva contraseña y sesiones; si existe otra cuenta SUPERADMIN o el correo ya pertenece a una cuenta sin ese rol, termina sin elevar ni modificar usuarios. Nunca crea una ficha de miembro.
+El comando solicita nombre y correo, comprueba el estado actual y solo entonces pide dos veces una contraseña de 12 a 128 caracteres sin mostrarla. La contraseña no viaja en argumentos, variables persistentes ni historial. Si la misma cuenta ya está activa, conserva contraseña y sesiones; si existe otra cuenta SUPERADMIN o el correo ya pertenece a una cuenta sin ese rol, termina sin elevar ni modificar usuarios. Nunca crea una ficha de miembro. No ejecutarlo rutinariamente: producción ya tiene administración activa.
 
 No registrar la contraseña en Git, documentación, Notion, tickets, capturas o trazas. El seed nunca lee `private/` y los miembros ficticios están desactivados salvo que `SEED_SYNTHETIC_DATA=true` se configure explícitamente; no habilitarlo en producción.
 

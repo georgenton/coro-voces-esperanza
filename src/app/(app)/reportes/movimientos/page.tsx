@@ -1,0 +1,76 @@
+import Link from "next/link";
+import { AppRole, MovementDirection } from "@/generated/prisma/client";
+import { Notice } from "@/components/notice";
+import { StatusPill } from "@/components/status-pill";
+import { requireAccess } from "@/lib/access";
+import { formatLocalDate, formatLocalDateNumeric } from "@/lib/dates";
+import { formatUsd } from "@/lib/money";
+import { getMonthlyAccountReport } from "@/server/reports/monthly-account";
+
+function currentPeriod() {
+  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", timeZone: "America/Guayaquil" }).format(new Date()).slice(0, 7);
+}
+
+function reportUrl(input: { period: string; accountId?: string; query?: string; page?: number }) {
+  const params = new URLSearchParams({ period: input.period });
+  if (input.accountId) params.set("account", input.accountId);
+  if (input.query) params.set("q", input.query);
+  if (input.page && input.page > 1) params.set("page", String(input.page));
+  return `/reportes/movimientos?${params.toString()}`;
+}
+
+const coverageLabels: Record<string, string> = {
+  EMPTY: "Mes vacío",
+  NOT_IMPORTED: "Fuente no importada",
+  PARTIAL: "Mes parcial",
+  WITH_MOVEMENTS: "Con movimientos; conciliación no certificada",
+  RECONCILED: "Conciliado con evidencia",
+};
+
+export default async function MonthlyMovementsReport({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; account?: string; q?: string; page?: string }>;
+}) {
+  await requireAccess([AppRole.SUPERADMIN, AppRole.ADMIN, AppRole.TESORERIA]);
+  const params = await searchParams;
+  const period = /^\d{4}-(0[1-9]|1[0-2])$/.test(params.period ?? "") ? params.period! : currentPeriod();
+  const report = await getMonthlyAccountReport({ period, accountId: params.account, query: params.q, page: Number(params.page) });
+  const exportParams = new URLSearchParams({ period });
+  if (report.accountId) exportParams.set("account", report.accountId);
+  if (report.query) exportParams.set("q", report.query);
+
+  return (
+    <div className="page">
+      <header className="page-header">
+        <div><p className="eyebrow">Cuenta por fecha real</p><h1>Reporte mensual</h1><p className="lede">Saldo inicial calculado, entradas, salidas y cierre usan una sola consulta operativa. La fuente histórica se muestra aparte y nunca se suma a esta tabla.</p></div>
+        <a className="button button-secondary" href={`/api/export/movements?${exportParams.toString()}`}>Exportar CSV</a>
+      </header>
+
+      <section className="card"><form className="form-grid"><div className="field"><label htmlFor="period">Año y mes</label><input id="period" name="period" type="month" defaultValue={period}/></div><div className="field"><label htmlFor="account">Cuenta</label><select id="account" name="account" defaultValue={report.accountId ?? ""}><option value="">Todas las cuentas</option>{report.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div className="field field-full"><label htmlFor="q">Buscar detalle, referencia o cuenta</label><input id="q" name="q" defaultValue={report.query ?? ""} maxLength={100}/></div><button className="button">Aplicar filtros</button></form></section>
+
+      {report.coverageState === "PARTIAL" ? <Notice warning="El período está documentado como parcial; sus totales no equivalen a un cierre mensual." /> : null}
+      {report.coverageState === "NOT_IMPORTED" ? <Notice warning="Existe una hoja histórica para este período, pero sus filas no han sido promovidas como movimientos operativos." /> : null}
+
+      <section className="section grid grid-4" aria-label="Totales del período completo">
+        <article className="card"><div className="metric-label">Saldo inicial calculado</div><div className="metric-value">{formatUsd(report.periodTotals.openingCents)}</div><div className="metric-note">Movimientos confirmados anteriores; no crea una apertura</div></article>
+        <article className="card"><div className="metric-label">Entradas del período</div><div className="metric-value">{formatUsd(report.periodTotals.entriesCents)}</div><div className="metric-note">Período completo, antes del filtro de texto</div></article>
+        <article className="card"><div className="metric-label">Salidas del período</div><div className="metric-value">{formatUsd(report.periodTotals.exitsCents)}</div><div className="metric-note">Incluye salidas de cuenta; el consolidado trata transferencias aparte</div></article>
+        <article className="card"><div className="metric-label">Saldo final calculado</div><div className="metric-value">{formatUsd(report.periodTotals.closingCents)}</div><div className="metric-note">{coverageLabels[report.coverageState]}{report.latestReconciledAt ? ` · última conciliación ${formatLocalDate(report.latestReconciledAt)}` : ""}</div></article>
+      </section>
+
+      <section className="section card">
+        <div className="section-header"><div><h2>Subtotal filtrado</h2><p className="small muted">Cambia con búsqueda y cuenta; no sustituye el cierre del período completo.</p></div><StatusPill value={report.coverageState} /></div>
+        <div className="metrics"><div className="metric"><span>Entradas filtradas</span><strong>{formatUsd(report.filteredTotals.entriesCents)}</strong></div><div className="metric"><span>Salidas filtradas</span><strong>{formatUsd(report.filteredTotals.exitsCents)}</strong></div><div className="metric"><span>Neto filtrado</span><strong>{formatUsd(report.filteredTotals.closingCents)}</strong></div><div className="metric"><span>Filas</span><strong>{report.pagination.totalRows}</strong></div></div>
+      </section>
+
+      <section className="section table-wrap"><table className="sticky-report"><thead><tr><th>Fecha</th><th>Ingreso: detalle</th><th className="numeric">Monto ingreso</th><th>Egreso: detalle</th><th className="numeric">Monto egreso</th><th>Observaciones</th></tr></thead><tbody>{report.movements.length ? report.movements.map((movement) => {
+        const detail = movement.description ?? movement.externalReference ?? "Sin detalle";
+        return <tr key={movement.id}><td>{formatLocalDateNumeric(movement.occurredAt)}</td><td>{movement.direction === MovementDirection.IN ? detail : ""}</td><td className="numeric">{movement.direction === MovementDirection.IN ? formatUsd(movement.amountCents) : ""}</td><td>{movement.direction === MovementDirection.OUT ? detail : ""}</td><td className="numeric">{movement.direction === MovementDirection.OUT ? formatUsd(movement.amountCents) : ""}</td><td><strong>{movement.account.name}</strong> · {movement.type.replaceAll("_", " ")}<br/><span className="small muted">{movement.externalReference ? `Ref. ${movement.externalReference} · ` : ""}{movement.paymentParts.length} distribución(es) · {movement.reconciliationCandidate?.status === "CONFIRMED" ? "conciliado" : "sin cierre de conciliación"}</span></td></tr>;
+      }) : <tr><td colSpan={6} className="empty">No hay movimientos operativos para este filtro. Un mes sin datos no se presenta como conciliado.</td></tr>}</tbody></table></section>
+
+      <div className="actions section">{report.pagination.page > 1 ? <Link className="button button-secondary" href={reportUrl({ period, accountId: report.accountId, query: report.query, page: report.pagination.page - 1 })}>Anterior</Link> : null}<span className="small muted">Página {report.pagination.page} de {report.pagination.totalPages}</span>{report.pagination.page < report.pagination.totalPages ? <Link className="button button-secondary" href={reportUrl({ period, accountId: report.accountId, query: report.query, page: report.pagination.page + 1 })}>Siguiente</Link> : null}</div>
+      {report.sourceCoverage ? <p className="small muted section">Cobertura documental: {report.sourceCoverage.status.toLowerCase()} · lote {report.sourceCoverage.sha256.slice(0, 12)}… · estado {report.sourceCoverage.batchStatus}. Esta referencia no se suma a los movimientos.</p> : null}
+    </div>
+  );
+}

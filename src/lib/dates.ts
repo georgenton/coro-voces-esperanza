@@ -24,6 +24,16 @@ export function formatLocalDate(value: Date | string | null | undefined) {
   }).format(typeof value === "string" ? new Date(value) : value);
 }
 
+export function formatLocalDateNumeric(value: Date | string | null | undefined) {
+  if (!value) return "Fecha pendiente";
+  return new Intl.DateTimeFormat("es-EC", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "America/Guayaquil",
+  }).format(typeof value === "string" ? new Date(value) : value);
+}
+
 export function formatLocalDateTime(value: Date | string | null | undefined) {
   if (!value) return "Fecha y hora pendientes";
   return new Intl.DateTimeFormat("es-EC", {

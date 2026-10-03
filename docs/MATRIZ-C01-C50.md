@@ -1,6 +1,6 @@
 # Matriz de aceptación C01–C50
 
-Fecha de ejecución: 1 de octubre de 2026, `America/Guayaquil`. Los datos de prueba son sintéticos. `PASS` significa evidencia ejecutada en esta sesión; `PARCIAL` significa que el control existe pero falta una prueba completa del escenario; `PENDIENTE` no se considera aceptado.
+Fecha de última ejecución local: 3 de octubre de 2026, `America/Guayaquil`. Los datos persistidos por las pruebas son sintéticos. `PASS` significa evidencia ejecutada; `PARCIAL` significa que el control existe pero falta una prueba completa del escenario; `PENDIENTE` no se considera aceptado.
 
 ## Comandos de evidencia
 
@@ -47,7 +47,7 @@ Fecha de ejecución: 1 de octubre de 2026, `America/Guayaquil`. Los datos de pru
 | C28 | Reverso reabre cargo | I | PASS | Reverso conserva movimiento, elimina aplicaciones y deja cargo pendiente. |
 | C29 | Exención/adelanto/deuda anterior separados | U, R | PASS | Sin neteo silencioso ni deuda como ingreso. |
 | C30 | Totales de referencia del informe | R | PASS | 880=730+150, deuda 155+295=450, 13 vs 14; marcados provisionales. |
-| C31 | Reimportación no duplica | I, R | PASS | Segundo XLSX idéntico devuelve el mismo lote; promoción/reintento mantiene publicaciones únicas. |
+| C31 | Reimportación no duplica | I, R | PASS | Segundo XLSX idéntico devuelve el mismo lote; staging sintético persiste exactamente 2 hojas, 2 filas y 4 celdas; promoción/reintento mantiene publicaciones únicas. |
 | C32 | Período sin fecha bancaria | U, I | PASS | LEGACY conserva período, `movementId`/`receivedAt`/`appliedAt` nulos y no crea caja. |
 | C33 | Jefe intenta otra cuerda | U | PARCIAL | Autorización por objeto rechaza otra cuerda; falta E2E autenticado de URL/API/exportación. |
 | C34 | Miembro altera `memberId` | U | PASS | `canAccessMember` solo permite su ficha y las acciones vuelven a resolver acceso en servidor. |

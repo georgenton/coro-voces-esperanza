@@ -9,8 +9,11 @@ const fullNavigation = [
   ["/miembros", "Miembros"],
   ["/cuotas", "Cuotas"],
   ["/movimientos", "Movimientos"],
+  ["/reportes/cuotas", "Matriz anual"],
+  ["/reportes/movimientos", "Reporte mensual"],
   ["/conciliar", "Conciliar"],
   ["/importar", "Importar Excel"],
+  ["/reportes/historico", "Histórico fuente"],
   ["/actividades", "Actividades"],
   ["/asistencia", "Asistencia"],
   ["/incidencias", "Incidencias"],
@@ -29,7 +32,7 @@ function visibleLinks(access: AccessContext) {
   const financeRoles = new Set<AppRole>([AppRole.SUPERADMIN, AppRole.ADMIN, AppRole.TESORERIA]);
   return fullNavigation.filter(([href]) => {
     if (href === "/configuracion") return access.roles.includes(AppRole.SUPERADMIN);
-    if (["/movimientos", "/conciliar", "/importar"].includes(href)) {
+    if (["/movimientos", "/conciliar", "/importar", "/reportes/historico", "/reportes/movimientos"].includes(href)) {
       return access.roles.some((role) => financeRoles.has(role));
     }
     return true;

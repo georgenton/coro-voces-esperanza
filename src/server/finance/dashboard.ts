@@ -1,11 +1,12 @@
-import { MovementDirection, MovementStatus, MovementType } from "@/generated/prisma/client";
+import { AppRole, MovementDirection, MovementStatus, MovementType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { isFinanceRole, isGlobalReadRole, type AccessContext } from "@/lib/access";
+import { summarizeCharges, summarizeMovements } from "@/server/reports/definitions";
 
 function scopedMemberWhere(access: AccessContext) {
   if (isGlobalReadRole(access)) return {};
-  if (access.memberId) return { id: access.memberId };
-  return { currentSectionId: { in: access.sectionIds } };
+  if (access.roles.includes(AppRole.JEFE_DE_CUERDA)) return { currentSectionId: { in: access.sectionIds } };
+  return access.memberId ? { id: access.memberId } : { id: { in: [] } };
 }
 
 export async function getDashboard(access: AccessContext, cutoffPeriod: string) {
@@ -33,17 +34,7 @@ export async function getDashboard(access: AccessContext, cutoffPeriod: string) 
     finance ? prisma.reconciliationCandidate.count({ where: { status: { in: ["RECEIVED", "EXTRACTION_PENDING", "REVIEW_REQUIRED", "POSSIBLE_DUPLICATE"] } } }) : Promise.resolve(0),
   ]);
 
-  let grossDueCents = 0;
-  let appliedCents = 0;
-  let overdueCents = 0;
-  const now = new Date();
-  for (const charge of charges) {
-    const due = charge.amountCents + charge.adjustments.reduce((sum, item) => sum + item.amountCents, 0);
-    const applied = charge.allocations.reduce((sum, item) => sum + item.amountCents, 0);
-    grossDueCents += due;
-    appliedCents += applied;
-    if (charge.dueOn && charge.dueOn < now) overdueCents += Math.max(0, due - applied);
-  }
+  const chargeSummary = summarizeCharges(charges);
   const memberCreditCents = parts.reduce((sum, part) => {
     const applied = part.allocations.reduce((value, allocation) => value + allocation.amountCents, 0);
     return sum + Math.max(0, part.amountCents - applied);
@@ -66,42 +57,21 @@ export async function getDashboard(access: AccessContext, cutoffPeriod: string) 
   const assignedCents = parts.reduce((sum, part) => sum + part.amountCents, 0);
   const unidentifiedCents = Math.max(0, identifiedCents - assignedCents);
 
+  const movementSummary = summarizeMovements(movements);
   const accountBalances = accounts.map((account) => ({
     id: account.id,
     name: account.name,
-    cents: movements
-      .filter((movement) => movement.cashEffect && movement.accountId === account.id)
-      .reduce(
-        (sum, movement) =>
-          sum + (movement.direction === MovementDirection.IN ? movement.amountCents : -movement.amountCents),
-        0,
-      ),
+    cents: movementSummary.accountBalances.get(account.id) ?? 0,
   }));
-  const externalIncomeCents = movements
-    .filter((movement) =>
-      movement.cashEffect &&
-      movement.direction === MovementDirection.IN &&
-      movement.type !== MovementType.INTERNAL_TRANSFER &&
-      movement.type !== MovementType.OPENING_BALANCE,
-    )
-    .reduce((sum, movement) => sum + movement.amountCents, 0);
-  const externalExpenseCents = movements
-    .filter((movement) =>
-      movement.cashEffect && movement.direction === MovementDirection.OUT && movement.type !== MovementType.INTERNAL_TRANSFER,
-    )
-    .reduce((sum, movement) => sum + movement.amountCents, 0);
 
   return {
     memberCount: memberIds.length,
-    grossDueCents,
-    appliedCents,
-    pendingCents: Math.max(0, grossDueCents - appliedCents),
-    overdueCents,
+    ...chargeSummary,
     memberCreditCents,
     advanceCents,
     unidentifiedCents,
-    externalIncomeCents,
-    externalExpenseCents,
+    externalIncomeCents: movementSummary.externalIncomeCents,
+    externalExpenseCents: movementSummary.externalExpenseCents,
     accountBalances,
     pendingImports,
     pendingCandidates,

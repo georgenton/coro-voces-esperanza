@@ -617,8 +617,13 @@ model ImportBatch {
   approvedById   String?
   mappingVersion Int               @default(0)
   mappingHash    String?
+  declaredCutoff DateTime?         @db.Date
+  cutoffTimezone String?
+  sourceVersion  String?
   updatedAt      DateTime          @updatedAt
   summary        Json?
+  sourceSheets   ImportSheet[]
+  sourceCells    ImportCell[]
   rows           ImportRow[]
   issues         ImportIssue[]
   promotions     ImportPromotion[]
@@ -632,6 +637,14 @@ model ImportRow {
   cellReference      String?
   rawText            String?
   recordFingerprint  String
+  contentFingerprint String              @default("")
+  semanticKey        String?
+  sourceKind         String              @default("SOURCE_CONTEXT")
+  nominalPeriod      String?
+  sourceData         Json?
+  firstCellReference String?
+  lastCellReference  String?
+  isAggregate        Boolean             @default(false)
   proposedType       String?
   transformed        Json?
   transformationHash String?
@@ -644,6 +657,53 @@ model ImportRow {
 
   @@unique([batchId, sheetName, rowNumber, recordFingerprint])
   @@index([batchId, status])
+  @@index([batchId, contentFingerprint])
+  @@index([batchId, semanticKey])
+}
+
+model ImportSheet {
+  id             String      @id @default(cuid())
+  batchId        String
+  name           String
+  physicalOrder  Int
+  kind           String
+  nominalPeriod  String?
+  coverageStatus String      @default("DOCUMENTED")
+  rowCount       Int
+  columnCount    Int
+  declaredRange  String?
+  blockYears     Json?
+  summary        Json?
+  createdAt      DateTime    @default(now())
+  batch          ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, name])
+  @@index([batchId, physicalOrder])
+  @@index([batchId, nominalPeriod])
+}
+
+model ImportCell {
+  id             String      @id @default(cuid())
+  batchId        String
+  sheetName      String
+  cellReference  String
+  rowNumber      Int
+  columnNumber   Int
+  valueType      String
+  literalValue   String?
+  formula        String?
+  cachedValue    String?
+  displayValue   String?
+  annotation     String?
+  originalDate   String?
+  numberFormat   String?
+  styleEvidence  Json?
+  mappingVersion Int         @default(1)
+  createdAt      DateTime    @default(now())
+  batch          ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, sheetName, cellReference])
+  @@index([batchId, sheetName, rowNumber])
 }
 
 model ImportPromotion {
@@ -682,15 +742,18 @@ model ImportPublication {
 }
 
 model ImportIssue {
-  id            String       @id @default(cuid())
-  batchId       String
-  code          String
-  sheetName     String?
-  cellReference String?
-  message       String
-  status        ReviewStatus @default(PENDING)
-  createdAt     DateTime     @default(now())
-  batch         ImportBatch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  batchId        String
+  code           String
+  sheetName      String?
+  cellReference  String?
+  message        String
+  evidence       String?
+  proposal       String?
+  decisionNeeded String?
+  status         ReviewStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  batch          ImportBatch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
   @@index([batchId, status])
 }
