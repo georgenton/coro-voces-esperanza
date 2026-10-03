@@ -1,14 +1,10 @@
 import { AppRole } from "@/generated/prisma/client";
 import { isGlobalReadRole, requireAccess } from "@/lib/access";
 import { prisma } from "@/lib/db";
+import { chargeAmounts } from "@/server/reports/definitions";
+import { csvCell } from "@/server/reports/csv";
 
 export const runtime = "nodejs";
-
-function csvCell(value: string | number) {
-  let text = String(value);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
 
 export async function GET(request: Request) {
   const access = await requireAccess([
@@ -39,8 +35,7 @@ export async function GET(request: Request) {
 
   const header = ["Miembro", "Cuerda", "Período", "Concepto", "Cargo USD", "Aplicado USD", "Saldo USD", "Estado"];
   const rows = charges.map((charge) => {
-    const amount = charge.amountCents + charge.adjustments.reduce((sum, item) => sum + item.amountCents, 0);
-    const applied = charge.allocations.reduce((sum, item) => sum + item.amountCents, 0);
+    const { dueCents: amount, appliedCents: applied } = chargeAmounts(charge);
     return [
       charge.member.displayName,
       charge.member.currentSection?.name ?? "Pendiente",

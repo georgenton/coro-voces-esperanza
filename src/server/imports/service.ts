@@ -88,6 +88,12 @@ function asJson(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
 }
 
+async function createManyInChunks<T>(items: T[], write: (chunk: T[]) => Promise<unknown>, size = 500) {
+  for (let index = 0; index < items.length; index += size) {
+    await write(items.slice(index, index + size));
+  }
+}
+
 function mappedRowsForBatch(batch: {
   rows: Array<{
     id: string;
@@ -235,10 +241,61 @@ export async function stageWorkbook(file: File, actorId: string) {
       sheetCount: preview.sheetCount,
       importedById: actorId,
       status: "REVIEW_REQUIRED",
-      summary: { sheets: preview.sheets.map(({ name, rowCount, columnCount }) => ({ name, rowCount, columnCount })) },
+      declaredCutoff: dateAtGuayaquilMidnight(preview.sourceSummary.cutoff),
+      cutoffTimezone: preview.sourceSummary.cutoffTimezone,
+      sourceVersion: `${preview.sourceSummary.cutoff}:${preview.sha256.slice(0, 12)}`,
+      summary: asJson({
+        source: preview.sourceSummary,
+        sheets: preview.sheets.map(({ name, physicalOrder, kind, nominalPeriod, coverageStatus, rowCount, columnCount, declaredRange, blockYears }) => ({
+          name, physicalOrder, kind, nominalPeriod, coverageStatus, rowCount, columnCount, declaredRange, blockYears,
+        })),
+      }),
     } });
-    const keptRows = preview.rows.slice(0, 5_000);
-    if (keptRows.length) await tx.importRow.createMany({ data: keptRows.map((row) => ({ batchId: created.id, sheetName: row.sheetName, rowNumber: row.rowNumber, rawText: row.rawText, recordFingerprint: row.fingerprint, status: "PENDING" })) });
+    await tx.importSheet.createMany({ data: preview.sheets.map((sheet) => ({
+      batchId: created.id,
+      name: sheet.name,
+      physicalOrder: sheet.physicalOrder,
+      kind: sheet.kind,
+      nominalPeriod: sheet.nominalPeriod,
+      coverageStatus: sheet.coverageStatus,
+      rowCount: sheet.rowCount,
+      columnCount: sheet.columnCount,
+      declaredRange: sheet.declaredRange,
+      blockYears: asJson(sheet.blockYears),
+      summary: asJson({ sample: sheet.sample }),
+    })) });
+    await createManyInChunks(preview.rows, (chunk) => tx.importRow.createMany({ data: chunk.map((row) => ({
+      batchId: created.id,
+      sheetName: row.sheetName,
+      rowNumber: row.rowNumber,
+      rawText: row.rawText,
+      recordFingerprint: row.fingerprint,
+      contentFingerprint: row.contentFingerprint,
+      semanticKey: row.semanticKey,
+      sourceKind: row.sourceKind,
+      nominalPeriod: row.nominalPeriod,
+      sourceData: asJson(row.sourceData),
+      firstCellReference: row.firstCellReference,
+      lastCellReference: row.lastCellReference,
+      isAggregate: row.isAggregate,
+      status: "PENDING",
+    })) }));
+    await createManyInChunks(preview.cells, (chunk) => tx.importCell.createMany({ data: chunk.map((cell) => ({
+      batchId: created.id,
+      sheetName: cell.sheetName,
+      cellReference: cell.cellReference,
+      rowNumber: cell.rowNumber,
+      columnNumber: cell.columnNumber,
+      valueType: cell.valueType,
+      literalValue: cell.literalValue,
+      formula: cell.formula,
+      cachedValue: cell.cachedValue,
+      displayValue: cell.displayValue,
+      annotation: cell.annotation,
+      originalDate: cell.originalDate,
+      numberFormat: cell.numberFormat,
+      styleEvidence: cell.styleEvidence ? asJson(cell.styleEvidence) : undefined,
+    })) }));
     if (preview.issues.length) await tx.importIssue.createMany({ data: preview.issues.map((issue) => ({ batchId: created.id, ...issue })) });
     await tx.auditLog.create({ data: {
       actorId,
@@ -246,7 +303,7 @@ export async function stageWorkbook(file: File, actorId: string) {
       entityType: "ImportBatch",
       entityId: created.id,
       summary: "Libro cargado a staging; no se generaron cargos ni movimientos.",
-      metadata: { sha256: preview.sha256, sheets: preview.sheetCount, rows: keptRows.length, issues: preview.issues.length },
+      metadata: { sha256: preview.sha256, sheets: preview.sheetCount, rows: preview.rows.length, cells: preview.cells.length, issues: preview.issues.length },
     } });
     return created;
   });

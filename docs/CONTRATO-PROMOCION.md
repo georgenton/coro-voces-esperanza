@@ -5,7 +5,8 @@ Este documento describe el paso controlado entre un Excel privado en staging y l
 ## Estados y aprobaciones
 
 - `ImportBatch.sha256` identifica el archivo inmutable. Una copia exacta devuelve el lote existente.
-- Cada `ImportRow` conserva hoja, fila, texto original y huella. Su transformación tiene tipo, JSON validado, hash, estado, revisor y fecha.
+- Cada `ImportSheet` conserva orden físico, tipo, período nominal, cobertura, rango y bloques de año. Cada `ImportCell` conserva referencia, valor literal, fórmula, caché, nota, fecha, formato y evidencia de estilo. Cada `ImportRow` conserva procedencia física, huella de contenido independiente de la fila, clave semántica conservadora y clasificación de contexto/candidato/agregado.
+- Su transformación tiene tipo, JSON validado, hash, estado, revisor y fecha.
 - Editar o resolver una fila/incidencia incrementa `mappingVersion`, borra `mappingHash`, devuelve el lote a revisión e invalida planes no ejecutados.
 - Aprobar el lote exige cero pendientes y vuelve a validar todas las transformaciones. Fija versión, hash, aprobador y fecha; no publica registros.
 - Una vista previa fija lote, alcance, versión y hash. Solo un plan vigente y sin bloqueos puede promoverse.
@@ -36,6 +37,8 @@ Cada alcance es atómico. Si una fila financiera depende de un miembro nuevo, se
 Las claves de origen usan SHA-256 de archivo, ID estable de fila y tipo de destino. `ImportPublication` enlaza la fila con cada miembro, asignación, cargo, parte, aplicación o movimiento. Constraints únicos protegen las publicaciones, miembros importados, asignaciones, partes LEGACY, cargos y movimientos.
 
 Un reintento de un plan promovido devuelve el mismo plan. Dos solicitudes concurrentes compiten por el mismo estado y los constraints/transacciones impiden duplicación. Una fila publicada queda bloqueada para edición; no se borra para “corregirla”.
+
+Entre versiones, una coincidencia exacta exige una huella de contenido única; una modificación exige una clave semántica única en ambas versiones. Duplicados o múltiples candidatos quedan `AMBIGUOUS`. Una fila ausente se conserva en la versión anterior y una publicación existente prevalece como `ALREADY_IMPORTED`.
 
 ## Reglas de rechazo
 

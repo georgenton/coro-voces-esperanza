@@ -35,14 +35,14 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
   await requireAccess([AppRole.SUPERADMIN, AppRole.ADMIN, AppRole.TESORERIA]);
   const params = await searchParams;
   const [batches, selected, members, sections, concepts, accounts] = await Promise.all([
-    prisma.importBatch.findMany({ orderBy: { createdAt: "desc" }, take: 20, include: { _count: { select: { rows: true, issues: true, promotions: true } } } }),
+    prisma.importBatch.findMany({ orderBy: { createdAt: "desc" }, take: 20, include: { _count: { select: { rows: true, sourceCells: true, issues: true, promotions: true } } } }),
     params.batch ? prisma.importBatch.findUnique({
       where: { id: params.batch },
       include: {
         issues: { orderBy: { createdAt: "asc" }, take: 50 },
         rows: { orderBy: [{ sheetName: "asc" }, { rowNumber: "asc" }], take: 50, include: { _count: { select: { publications: true } } } },
         promotions: { orderBy: { createdAt: "desc" }, take: 8, include: { _count: { select: { publications: true } } } },
-        _count: { select: { rows: { where: { status: "PENDING" } }, issues: { where: { status: "PENDING" } } } },
+        _count: { select: { rows: { where: { status: "PENDING" } }, sourceCells: true, issues: { where: { status: "PENDING" } } } },
       },
     }) : null,
     prisma.member.findMany({ orderBy: { displayName: "asc" }, select: { id: true, displayName: true, normalizedName: true } }),
@@ -59,12 +59,12 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
       <Notice success={params.success} error={params.error} />
       <section className="card"><h2>Cargar libro inmutable</h2><form action={uploadWorkbookAction} className="form-grid"><div className="field field-full"><label htmlFor="workbook">Archivo XLSX</label><input id="workbook" name="workbook" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /></div><SubmitButton pendingText="Analizando…">Crear vista previa</SubmitButton></form><p className="muted small">No se ejecutan macros ni enlaces. Cargar un archivo nunca crea miembros, cargos, aplicaciones ni movimientos.</p></section>
       <section className="section grid grid-2">
-        <article className="card"><h2>Lotes recientes</h2>{batches.length ? batches.map((batch) => <p key={batch.id}><a href={`/importar?batch=${batch.id}`}><strong>{batch.originalName}</strong></a><br/><StatusPill value={batch.status} /> <span className="muted small">v{batch.mappingVersion} · {batch.sheetCount} hojas · {batch._count.rows} filas · {batch._count.issues} incidencias · {batch._count.promotions} vista(s) · {formatLocalDateTime(batch.createdAt)}</span></p>) : <p className="empty">No hay archivos en staging.</p>}</article>
+        <article className="card"><h2>Lotes recientes</h2>{batches.length ? batches.map((batch) => <p key={batch.id}><a href={`/importar?batch=${batch.id}`}><strong>{batch.originalName}</strong></a><br/><StatusPill value={batch.status} /> <span className="muted small">v{batch.mappingVersion} · {batch.sheetCount} hojas · {batch._count.rows} filas · {batch._count.sourceCells} celdas · {batch._count.issues} incidencias · {batch._count.promotions} vista(s) · {formatLocalDateTime(batch.createdAt)}</span></p>) : <p className="empty">No hay archivos en staging.</p>}</article>
         <article className="card"><h2>Controles</h2><ul className="small muted"><li>Una edición invalida aprobación y vistas previas anteriores.</li><li>Identidades aproximadas solo aparecen como sugerencias.</li><li>Una aplicación LEGACY no crea movimiento ni saldo de caja.</li><li>Fecha desconocida permanece nula; un movimiento exige fecha aprobada.</li><li>Miembros y finanzas pueden promoverse como subconjuntos explícitos.</li></ul></article>
       </section>
 
       {selected ? <section className="section">
-        <div className="card"><div className="section-header"><div><h2>{selected.originalName}</h2><p className="mono small muted">SHA-256 {selected.sha256}</p><p className="small muted">Mapeo v{selected.mappingVersion}{selected.mappingHash ? ` · ${selected.mappingHash.slice(0, 16)}…` : " · sin aprobación vigente"}</p></div><StatusPill value={selected.status} /></div><p>{selected._count.rows} fila(s) y {selected._count.issues} incidencia(s) siguen pendientes.</p><form action={approveBatchAction}><input type="hidden" name="batchId" value={selected.id} /><SubmitButton pendingText="Validando…">Aprobar mapeo resuelto</SubmitButton></form></div>
+        <div className="card"><div className="section-header"><div><h2>{selected.originalName}</h2><p className="mono small muted">SHA-256 {selected.sha256}</p><p className="small muted">Mapeo v{selected.mappingVersion}{selected.mappingHash ? ` · ${selected.mappingHash.slice(0, 16)}…` : " · sin aprobación vigente"} · {selected._count.sourceCells} celdas preservadas</p></div><StatusPill value={selected.status} /></div><p>{selected._count.rows} fila(s) y {selected._count.issues} incidencia(s) siguen pendientes.</p><div className="actions"><a className="button button-secondary" href={`/reportes/historico?batch=${selected.id}`}>Ver histórico fuente</a><form action={approveBatchAction}><input type="hidden" name="batchId" value={selected.id} /><SubmitButton pendingText="Validando…">Aprobar mapeo resuelto</SubmitButton></form></div></div>
 
         <div className="grid grid-2 section">
           <article className="card"><h2>Incidencias</h2>{selected.issues.length ? selected.issues.map((issue) => <div key={issue.id} className="section"><StatusPill value={issue.status} /> <strong>{issue.code}</strong><p className="small">{issue.sheetName ? `${issue.sheetName}${issue.cellReference ? `!${issue.cellReference}` : ""}: ` : ""}{issue.message}</p>{issue.status === "PENDING" ? <div className="actions">{["APPROVED", "REJECTED"].map((status) => <form action={resolveImportItemAction} key={status}><input type="hidden" name="batchId" value={selected.id}/><input type="hidden" name="kind" value="issue"/><input type="hidden" name="id" value={issue.id}/><input type="hidden" name="status" value={status}/><button className="button button-secondary button-small">{status === "APPROVED" ? "Aceptar tratamiento" : "Rechazar"}</button></form>)}</div> : null}</div>) : <p className="empty">Sin incidencias.</p>}</article>

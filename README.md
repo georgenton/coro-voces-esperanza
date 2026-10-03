@@ -69,6 +69,8 @@ En **Importar Excel** el flujo es: cargar → mapear cada fila → aprobar/exclu
 
 No se promueve una identidad aproximada, una fecha desconocida, un cargo con importe diferente, una aplicación excesiva ni un mapeo editado después de aprobarse. Consulta `docs/CONTRATO-PROMOCION.md`.
 
+La vista **Histórico fuente** permite revisar hojas, filas, celdas, fórmulas, incidencias y diferencias entre versiones sin sumar esos datos a la operación. **Reporte mensual** calcula apertura, entradas, salidas y cierre desde movimientos confirmados. **Matriz anual de cuotas** usa cargos y aplicaciones, distingue períodos futuros/no exigibles/sin importar y respeta el alcance global o por cuerda. Ambos informes exportan CSV desde las mismas consultas del servidor.
+
 ## Documentación
 
 - `PROMPT-CODEX.md`: alcance funcional y reglas.

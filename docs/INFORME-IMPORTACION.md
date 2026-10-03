@@ -1,19 +1,34 @@
 # Informe de preparación de importación
 
-Fecha de revisión: 1 de octubre de 2026.
+Fecha de revisión: 3 de octubre de 2026.
 
 ## Evidencia verificada
 
-- El archivo fuente entregado conserva el SHA-256 `6f35538aabc75c2079da62bd221c40d17f792f15f76fd43889b5e3254564a60e`.
-- Se confirmaron 30 hojas y la estructura general descrita en el diagnóstico.
-- La inspección fue de solo lectura. No se alteró el libro ni se cargaron datos personales a la base de desarrollo.
+- El archivo `REPORTE 7. CUOTAS.xlsx` conserva el SHA-256 `fb50b25e3bb54f9206d150f18a5f1d06b05298df402e518b10a9a596deddd315` declarado en la guía del 1 de octubre.
+- Se confirmaron 30 hojas, 833 filas no vacías conservadas y 4.357 celdas con evidencia. Las 22 hojas mensuales cubren `2025-01` a `2026-10`; octubre de 2026 es parcial al corte inclusivo `2026-10-01`, `America/Guayaquil`.
+- La inspección del archivo real fue de solo lectura. No se alteró el libro, no se imprimieron identidades en los resultados y no se cargaron datos personales a PostgreSQL de pruebas ni a producción.
 - `private/` y el diagnóstico detallado permanecen excluidos de Git y de la imagen Docker.
 
 ## Implementación del importador
 
-El asistente recibe XLSX en almacenamiento privado, calcula SHA-256, limita tamaño, hojas, filas y celdas, y guarda un lote de staging con hoja, fila, texto original y huella por registro. Una recarga del mismo archivo devuelve el lote existente. Un archivo modificado crea un lote distinto para comparación.
+El asistente recibe XLSX en almacenamiento privado, calcula SHA-256, limita tamaño, hojas, filas y celdas, y guarda un lote de staging con inventario físico de hojas, fila, celda, valor literal, fórmula, valor cacheado, nota, fecha original, formato, evidencia de estilo, versión de mapeo y huellas separadas de contenido y procedencia. Una recarga del mismo archivo devuelve el lote existente. Un archivo modificado crea un lote distinto para comparación.
+
+La comparación entre versiones clasifica filas como nuevas, coincidentes, modificadas, ambiguas, ausentes o ya publicadas. La fila física no se usa como identidad permanente. La vista **Histórico fuente** mantiene este staging privado separado de miembros, cargos, aplicaciones y movimientos.
 
 La carga no crea cargos, pagos, movimientos ni saldos. Antes de aprobar, todas las filas e incidencias deben quedar resueltas de forma explícita. Las fechas bancarias desconocidas permanecen nulas y las marcas `X` no se convierten automáticamente en pausas.
+
+## Incidencias no nominativas detectadas
+
+- 4 fechas de filas candidatas a movimiento están fuera del mes nominal.
+- 1 fecha de apertura no corresponde al mes inmediatamente anterior.
+- octubre de 2026 conserva una fecha de 2025 y está marcado como parcial;
+- 2 rótulos conservan referencias antiguas;
+- la matriz 2026 contiene contador no equivalente al padrón, una fila sin número, una fila administrativa, un importe atípico `55`, una fórmula anual que requiere revisión y valores de junio que contradicen la hipótesis previa;
+- 2 menciones mensuales quedan como identidades candidatas, nunca como altas automáticas;
+- ahorro y parqueadero contienen bloques de más de un año;
+- toda fecha bancaria derivada solamente de una celda periódica permanece pendiente.
+
+Las fechas de la fila de apertura que sí corresponden al cierre del mes anterior se clasifican como contexto de apertura y no como movimientos fuera de período. Sus celdas originales permanecen intactas.
 
 ## Ambigüedades que siguen requiriendo decisión humana
 
