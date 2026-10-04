@@ -1,18 +1,20 @@
 # Despliegue en Coolify
 
-La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare. La rama de datos e informes del 3 de octubre todavía no está desplegada.
+La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare. La fase de datos e informes del PR 6 se desplegó el 3 de octubre; la rama visual `codex/interfaz-reportes` no está desplegada.
 
 ## Estado de producción verificado
 
 - Proyecto Coolify: `Voces de Esperanza` (`curszcfgrj5qgqoalyjpjfx1`), entorno `production` (`hqjrkmlxe1xybokuktovevmb`).
-- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, commit desplegado `786d8aafe2636f890ede2cb56d97ef50b9cd483e`.
+- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, commit desplegado `b0a71f3974e6cf8969e6c7e4244e64d645733263`.
 - PostgreSQL 17 privado: `voces-postgres` (`cw9lgsmko0t2rnramfsrqmrm`), base `voces_esperanza`, sin puerto público.
 - Volumen de adjuntos: `qwag6glb0gc6jfzlfwa46fi4-voces-uploads` en `/data/uploads`.
 - HTTPS externo: `/api/health` respondió 200 con `{"status":"healthy"}`, `Cache-Control: no-store` y `X-Robots-Tag: noindex, nofollow`.
-- Migraciones en producción: 3 aplicadas y al día para el commit desplegado. La cuarta migración de esta rama solo se validó en PostgreSQL 17 local.
+- Migraciones en producción: 4 aplicadas y al día para el commit desplegado.
 - Estado verificado el 3 de octubre antes de desplegar esta rama: 1 usuario administrador activo, 1 sesión y 1 auditoría; 0 miembros, lotes, filas, publicaciones, cargos, partes de pago, aplicaciones y movimientos. Los catálogos base permanecen separados.
 - La imagen final incluye `curl` para el healthcheck interno de Coolify. El primer intento sin esa dependencia falló de forma segura y Coolify retiró el contenedor no saludable; el segundo quedó `healthy`.
 - El PR 4 añadió el bootstrap interactivo del SUPERADMIN. Coolify desplegó el merge `786d8aa` en 3m48s con estado `Success`; después `/api/health` respondió 200 por HTTPS con `no-store` y `noindex`. El SUPERADMIN ya fue activado en el flujo privado.
+- Antes del PR 6 se ejecutó un respaldo manual (`Success`, 102.73 KB) y se comprobó que las tablas operativas seguían vacías. El despliegue manual `iyizordbdpqfd9aaqfmq5qvy` publicó `b0a71f3` en 4m01s con estado `Success`; `/api/health` respondió 200 y `{"status":"healthy"}`.
+- Coolify muestra “Deploy on push”, pero el merge 6 no produjo un despliegue y GitHub no mostró un webhook del repositorio. Hasta reparar y probar ese enlace, los despliegues requieren verificación y disparo manual.
 
 ## 1. Recursos
 
@@ -35,6 +37,8 @@ Definir en Coolify, sin guardarlas en Git:
 - `AI_VISION_PROVIDER=disabled` hasta aprobar privacidad y proveedor.
 
 La aplicación falla de forma segura si faltan base de datos o secretos. No hay contraseña demo de producción.
+
+Los secretos anteriores son de runtime y no deben inyectarse como argumentos de build ni imprimirse en logs de construcción. La configuración actual de Coolify debe auditarse y los secretos potencialmente expuestos deben rotarse antes del piloto; no copiar sus valores a incidencias, documentación o PR.
 
 ## 3. Construcción y migraciones
 

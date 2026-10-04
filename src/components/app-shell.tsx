@@ -3,34 +3,38 @@ import { AppRole } from "@/generated/prisma/client";
 import type { AccessContext } from "@/lib/access";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Notice } from "@/components/notice";
+import { AppNavigation, type NavigationLink } from "@/components/app-navigation";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const fullNavigation = [
-  ["/resumen", "Resumen"],
-  ["/miembros", "Miembros"],
-  ["/cuotas", "Cuotas"],
-  ["/movimientos", "Movimientos"],
-  ["/reportes/cuotas", "Matriz anual"],
-  ["/reportes/movimientos", "Reporte mensual"],
-  ["/conciliar", "Conciliar"],
-  ["/importar", "Importar Excel"],
-  ["/reportes/historico", "Histórico fuente"],
-  ["/actividades", "Actividades"],
-  ["/asistencia", "Asistencia"],
-  ["/incidencias", "Incidencias"],
-  ["/configuracion", "Configuración"],
-] as const;
+  { href: "/resumen", label: "Resumen", icon: "⌂" },
+  { href: "/miembros", label: "Miembros", icon: "♩" },
+  { href: "/cuotas", label: "Cuotas", icon: "$" },
+  { href: "/movimientos", label: "Movimientos", icon: "↕" },
+  { href: "/reportes/cuotas", label: "Matriz anual", icon: "▦" },
+  { href: "/reportes/movimientos", label: "Reporte mensual", icon: "≋" },
+  { href: "/conciliar", label: "Conciliar", icon: "✓" },
+  { href: "/importar", label: "Importar Excel", icon: "⇧" },
+  { href: "/reportes/historico", label: "Histórico fuente", icon: "◷" },
+  { href: "/actividades", label: "Actividades", icon: "◇" },
+  { href: "/asistencia", label: "Asistencia", icon: "▣" },
+  { href: "/incidencias", label: "Incidencias", icon: "!" },
+  { href: "/configuracion", label: "Configuración", icon: "⚙" },
+] satisfies NavigationLink[];
 
 const memberNavigation = [
-  ["/mi-cuenta", "Mi cuenta"],
-  ["/mi-asistencia", "Mi asistencia"],
-  ["/enviar-comprobante", "Enviar comprobante"],
-] as const;
+  { href: "/resumen", label: "Mi resumen", icon: "⌂" },
+  { href: "/reportes/cuotas", label: "Mis cuotas", icon: "▦" },
+  { href: "/mi-cuenta", label: "Mi cuenta", icon: "$" },
+  { href: "/mi-asistencia", label: "Mi asistencia", icon: "▣" },
+  { href: "/enviar-comprobante", label: "Enviar comprobante", icon: "⇧" },
+] satisfies NavigationLink[];
 
 function visibleLinks(access: AccessContext) {
   const isOnlyMember = access.roles.length === 1 && access.roles.includes(AppRole.MIEMBRO);
   if (isOnlyMember) return memberNavigation;
   const financeRoles = new Set<AppRole>([AppRole.SUPERADMIN, AppRole.ADMIN, AppRole.TESORERIA]);
-  return fullNavigation.filter(([href]) => {
+  return fullNavigation.filter(({ href }) => {
     if (href === "/configuracion") return access.roles.includes(AppRole.SUPERADMIN);
     if (["/movimientos", "/conciliar", "/importar", "/reportes/historico", "/reportes/movimientos"].includes(href)) {
       return access.roles.some((role) => financeRoles.has(role));
@@ -51,17 +55,14 @@ export function AppShell({ access, children }: { access: AccessContext; children
           </span>
         </Link>
         <div className="actions">
-          <span className="small">{access.name}</span>
+          <ThemeToggle />
+          <span className="user-chip"><span aria-hidden="true">●</span><span>{access.name}</span></span>
           <SignOutButton />
         </div>
       </header>
       <div className="app-grid">
         <aside className="sidebar" aria-label="Navegación principal">
-          <nav className="nav-list">
-            {visibleLinks(access).map(([href, label]) => (
-              <Link className="nav-link" href={href} key={href}>{label}</Link>
-            ))}
-          </nav>
+          <AppNavigation links={[...visibleLinks(access)]} />
           <p className="sidebar-note">Información privada. Los comprobantes y datos personales solo se muestran según tu rol y cuerda.</p>
         </aside>
         <main><Notice warning="Migración histórica pendiente de aprobación" />{children}</main>

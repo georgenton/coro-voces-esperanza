@@ -1,4 +1,4 @@
-import { EvidenceStatus, MovementStatus, Prisma } from "@/generated/prisma/client";
+import { EvidenceStatus, MovementStatus, MovementType, Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { assertPeriod } from "@/lib/dates";
 import { signedMovement, summarizeAccountPeriod } from "@/server/reports/definitions";
@@ -18,6 +18,7 @@ function periodBounds(period: string) {
 export async function getMonthlyAccountReport(input: {
   period: string;
   accountId?: string;
+  movementType?: string;
   query?: string;
   page?: number;
   paginate?: boolean;
@@ -28,6 +29,9 @@ export async function getMonthlyAccountReport(input: {
   const paginate = input.paginate !== false;
   const accounts = await prisma.financialAccount.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
   const accountId = input.accountId && accounts.some(({ id }) => id === input.accountId) ? input.accountId : undefined;
+  const movementType = Object.values(MovementType).includes(input.movementType as MovementType)
+    ? input.movementType as MovementType
+    : undefined;
   const baseWhere: Prisma.MoneyMovementWhereInput = {
     status: MovementStatus.CONFIRMED,
     occurredAt: { gte: start, lt: end },
@@ -35,6 +39,7 @@ export async function getMonthlyAccountReport(input: {
   };
   const filteredWhere: Prisma.MoneyMovementWhereInput = {
     ...baseWhere,
+    ...(movementType ? { type: movementType } : {}),
     ...(query ? { OR: [
       { description: { contains: query, mode: "insensitive" } },
       { externalReference: { contains: query, mode: "insensitive" } },
@@ -51,14 +56,29 @@ export async function getMonthlyAccountReport(input: {
     prisma.moneyMovement.findMany({ where: openingWhere, select: { amountCents: true, direction: true, cashEffect: true } }),
     prisma.moneyMovement.findMany({
       where: baseWhere,
-      include: { account: true, paymentParts: true, reconciliationCandidate: true },
+      include: { account: true, reconciliationCandidate: true },
       orderBy: [{ occurredAt: "asc" }, { recordedAt: "asc" }, { id: "asc" }],
     }),
     prisma.moneyMovement.findMany({ where: filteredWhere, select: { accountId: true, amountCents: true, direction: true, type: true, cashEffect: true } }),
     prisma.moneyMovement.count({ where: filteredWhere }),
     prisma.moneyMovement.findMany({
       where: filteredWhere,
-      include: { account: true, paymentParts: true, reconciliationCandidate: true },
+      include: {
+        account: true,
+        reconciliationCandidate: true,
+        paymentParts: {
+          include: {
+            member: { select: { id: true, displayName: true } },
+            allocations: {
+              include: {
+                charge: { select: { id: true, period: true, concept: { select: { name: true } } } },
+              },
+              orderBy: { recordedAt: "asc" },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
       orderBy: [{ occurredAt: "asc" }, { recordedAt: "asc" }, { id: "asc" }],
       ...(paginate ? { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE } : {}),
     }),
@@ -91,6 +111,7 @@ export async function getMonthlyAccountReport(input: {
     period: input.period,
     accounts,
     accountId,
+    movementType,
     query,
     movements,
     periodTotals,

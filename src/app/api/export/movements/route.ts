@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   const report = await getMonthlyAccountReport({
     period,
     accountId: params.get("account") ?? undefined,
+    movementType: params.get("type") ?? undefined,
     query: params.get("q") ?? undefined,
     paginate: false,
   });

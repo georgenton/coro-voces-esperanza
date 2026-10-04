@@ -69,7 +69,7 @@ En **Importar Excel** el flujo es: cargar → mapear cada fila → aprobar/exclu
 
 No se promueve una identidad aproximada, una fecha desconocida, un cargo con importe diferente, una aplicación excesiva ni un mapeo editado después de aprobarse. Consulta `docs/CONTRATO-PROMOCION.md`.
 
-La vista **Histórico fuente** permite revisar hojas, filas, celdas, fórmulas, incidencias y diferencias entre versiones sin sumar esos datos a la operación. **Reporte mensual** calcula apertura, entradas, salidas y cierre desde movimientos confirmados. **Matriz anual de cuotas** usa cargos y aplicaciones, distingue períodos futuros/no exigibles/sin importar y respeta el alcance global o por cuerda. Ambos informes exportan CSV desde las mismas consultas del servidor.
+La vista **Histórico fuente** permite revisar hojas, filas, celdas, fórmulas, incidencias y diferencias entre versiones sin sumar esos datos a la operación. **Reporte mensual** calcula apertura, entradas, salidas y cierre desde movimientos confirmados. **Matriz anual de cuotas** usa cargos y aplicaciones, distingue períodos futuros/no exigibles/sin importar y respeta el alcance global, por cuerda o individual. Ambos informes exportan CSV desde las mismas consultas del servidor. El dashboard comparte estos servicios, conserva período/cuerda al navegar y ofrece tema claro, oscuro o del sistema.
 
 ## Documentación
 
@@ -80,5 +80,6 @@ La vista **Histórico fuente** permite revisar hojas, filas, celdas, fórmulas, 
 - `docs/DEPLOY-COOLIFY.md`: despliegue, dominio, volumen, cron y restauración.
 - `docs/CONTRATO-PROMOCION.md`: contrato de staging, aprobación, vista previa y publicación.
 - `docs/MATRIZ-C01-C50.md`: trazabilidad de cada criterio a prueba, comando y evidencia.
+- `docs/REVISION-INTERFAZ.md`: procedencia del diseño, integración real, R01–R04 y evidencia responsive.
 
 `private/`, Excel, comprobantes, respaldos y el diagnóstico confidencial están ignorados por Git y Docker.

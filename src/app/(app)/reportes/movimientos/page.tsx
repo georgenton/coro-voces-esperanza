@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { AppRole, MovementDirection } from "@/generated/prisma/client";
+import { AppRole, MovementType } from "@/generated/prisma/client";
 import { Notice } from "@/components/notice";
+import { MonthlyLedger } from "@/components/reports/monthly-ledger";
 import { StatusPill } from "@/components/status-pill";
 import { requireAccess } from "@/lib/access";
 import { formatLocalDate, formatLocalDateNumeric } from "@/lib/dates";
@@ -11,9 +12,10 @@ function currentPeriod() {
   return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", timeZone: "America/Guayaquil" }).format(new Date()).slice(0, 7);
 }
 
-function reportUrl(input: { period: string; accountId?: string; query?: string; page?: number }) {
+function reportUrl(input: { period: string; accountId?: string; movementType?: string; query?: string; page?: number }) {
   const params = new URLSearchParams({ period: input.period });
   if (input.accountId) params.set("account", input.accountId);
+  if (input.movementType) params.set("type", input.movementType);
   if (input.query) params.set("q", input.query);
   if (input.page && input.page > 1) params.set("page", String(input.page));
   return `/reportes/movimientos?${params.toString()}`;
@@ -27,17 +29,27 @@ const coverageLabels: Record<string, string> = {
   RECONCILED: "Conciliado con evidencia",
 };
 
+const movementTypeLabels: Record<string, string> = {
+  PAYMENT: "Pago",
+  EXPENSE: "Gasto",
+  INTEREST: "Interés",
+  INTERNAL_TRANSFER: "Transferencia interna",
+  OPENING_BALANCE: "Saldo de apertura",
+  REVERSAL: "Reversión",
+};
+
 export default async function MonthlyMovementsReport({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; account?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ period?: string; account?: string; type?: string; q?: string; page?: string }>;
 }) {
   await requireAccess([AppRole.SUPERADMIN, AppRole.ADMIN, AppRole.TESORERIA]);
   const params = await searchParams;
   const period = /^\d{4}-(0[1-9]|1[0-2])$/.test(params.period ?? "") ? params.period! : currentPeriod();
-  const report = await getMonthlyAccountReport({ period, accountId: params.account, query: params.q, page: Number(params.page) });
+  const report = await getMonthlyAccountReport({ period, accountId: params.account, movementType: params.type, query: params.q, page: Number(params.page) });
   const exportParams = new URLSearchParams({ period });
   if (report.accountId) exportParams.set("account", report.accountId);
+  if (report.movementType) exportParams.set("type", report.movementType);
   if (report.query) exportParams.set("q", report.query);
 
   return (
@@ -47,7 +59,7 @@ export default async function MonthlyMovementsReport({
         <a className="button button-secondary" href={`/api/export/movements?${exportParams.toString()}`}>Exportar CSV</a>
       </header>
 
-      <section className="card"><form className="form-grid"><div className="field"><label htmlFor="period">Año y mes</label><input id="period" name="period" type="month" defaultValue={period}/></div><div className="field"><label htmlFor="account">Cuenta</label><select id="account" name="account" defaultValue={report.accountId ?? ""}><option value="">Todas las cuentas</option>{report.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div className="field field-full"><label htmlFor="q">Buscar detalle, referencia o cuenta</label><input id="q" name="q" defaultValue={report.query ?? ""} maxLength={100}/></div><button className="button">Aplicar filtros</button></form></section>
+      <section className="card filter-card"><form className="report-filters"><div className="field"><label htmlFor="period">Año y mes</label><input id="period" name="period" type="month" defaultValue={period}/></div><div className="field"><label htmlFor="account">Cuenta</label><select id="account" name="account" defaultValue={report.accountId ?? ""}><option value="">Todas las cuentas</option>{report.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div className="field"><label htmlFor="type">Tipo</label><select id="type" name="type" defaultValue={report.movementType ?? ""}><option value="">Todos los tipos</option>{Object.values(MovementType).map((type) => <option key={type} value={type}>{movementTypeLabels[type] ?? type}</option>)}</select></div><div className="field filter-search"><label htmlFor="q">Buscar detalle, referencia o cuenta</label><input id="q" name="q" defaultValue={report.query ?? ""} maxLength={100}/></div><button className="button">Aplicar filtros</button></form></section>
 
       {report.coverageState === "PARTIAL" ? <Notice warning="El período está documentado como parcial; sus totales no equivalen a un cierre mensual." /> : null}
       {report.coverageState === "NOT_IMPORTED" ? <Notice warning="Existe una hoja histórica para este período, pero sus filas no han sido promovidas como movimientos operativos." /> : null}
@@ -64,12 +76,27 @@ export default async function MonthlyMovementsReport({
         <div className="metrics"><div className="metric"><span>Entradas filtradas</span><strong>{formatUsd(report.filteredTotals.entriesCents)}</strong></div><div className="metric"><span>Salidas filtradas</span><strong>{formatUsd(report.filteredTotals.exitsCents)}</strong></div><div className="metric"><span>Neto filtrado</span><strong>{formatUsd(report.filteredTotals.closingCents)}</strong></div><div className="metric"><span>Filas</span><strong>{report.pagination.totalRows}</strong></div></div>
       </section>
 
-      <section className="section table-wrap"><table className="sticky-report"><thead><tr><th>Fecha</th><th>Ingreso: detalle</th><th className="numeric">Monto ingreso</th><th>Egreso: detalle</th><th className="numeric">Monto egreso</th><th>Observaciones</th></tr></thead><tbody>{report.movements.length ? report.movements.map((movement) => {
-        const detail = movement.description ?? movement.externalReference ?? "Sin detalle";
-        return <tr key={movement.id}><td>{formatLocalDateNumeric(movement.occurredAt)}</td><td>{movement.direction === MovementDirection.IN ? detail : ""}</td><td className="numeric">{movement.direction === MovementDirection.IN ? formatUsd(movement.amountCents) : ""}</td><td>{movement.direction === MovementDirection.OUT ? detail : ""}</td><td className="numeric">{movement.direction === MovementDirection.OUT ? formatUsd(movement.amountCents) : ""}</td><td><strong>{movement.account.name}</strong> · {movement.type.replaceAll("_", " ")}<br/><span className="small muted">{movement.externalReference ? `Ref. ${movement.externalReference} · ` : ""}{movement.paymentParts.length} distribución(es) · {movement.reconciliationCandidate?.status === "CONFIRMED" ? "conciliado" : "sin cierre de conciliación"}</span></td></tr>;
-      }) : <tr><td colSpan={6} className="empty">No hay movimientos operativos para este filtro. Un mes sin datos no se presenta como conciliado.</td></tr>}</tbody></table></section>
+      <MonthlyLedger movements={report.movements.map((movement) => ({
+        id: movement.id,
+        occurredOn: formatLocalDateNumeric(movement.occurredAt),
+        direction: movement.direction,
+        amountCents: movement.amountCents,
+        detail: movement.description ?? movement.externalReference ?? "Sin detalle",
+        accountName: movement.account.name,
+        type: movement.type,
+        externalReference: movement.externalReference,
+        source: movement.source,
+        reconciliationStatus: movement.reconciliationCandidate?.status ?? null,
+        paymentParts: movement.paymentParts.map((part) => ({
+          id: part.id,
+          memberName: part.member.displayName,
+          amountCents: part.amountCents,
+          note: part.note,
+          allocations: part.allocations.map((allocation) => ({ id: allocation.id, period: allocation.charge.period, conceptName: allocation.charge.concept.name, amountCents: allocation.amountCents })),
+        })),
+      }))} />
 
-      <div className="actions section">{report.pagination.page > 1 ? <Link className="button button-secondary" href={reportUrl({ period, accountId: report.accountId, query: report.query, page: report.pagination.page - 1 })}>Anterior</Link> : null}<span className="small muted">Página {report.pagination.page} de {report.pagination.totalPages}</span>{report.pagination.page < report.pagination.totalPages ? <Link className="button button-secondary" href={reportUrl({ period, accountId: report.accountId, query: report.query, page: report.pagination.page + 1 })}>Siguiente</Link> : null}</div>
+      <div className="actions section">{report.pagination.page > 1 ? <Link className="button button-secondary" href={reportUrl({ period, accountId: report.accountId, movementType: report.movementType, query: report.query, page: report.pagination.page - 1 })}>Anterior</Link> : null}<span className="small muted">Página {report.pagination.page} de {report.pagination.totalPages}</span>{report.pagination.page < report.pagination.totalPages ? <Link className="button button-secondary" href={reportUrl({ period, accountId: report.accountId, movementType: report.movementType, query: report.query, page: report.pagination.page + 1 })}>Siguiente</Link> : null}</div>
       {report.sourceCoverage ? <p className="small muted section">Cobertura documental: {report.sourceCoverage.status.toLowerCase()} · lote {report.sourceCoverage.sha256.slice(0, 12)}… · estado {report.sourceCoverage.batchStatus}. Esta referencia no se suma a los movimientos.</p> : null}
     </div>
   );
