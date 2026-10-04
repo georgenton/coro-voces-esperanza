@@ -9,7 +9,8 @@ Fecha de última ejecución local: 3 de octubre de 2026, `America/Guayaquil`. Lo
 | U | macOS, Node 24.19.0 | `pnpm test` |
 | R | macOS, Node 24.19.0 | `pnpm verify:reference` |
 | I | PostgreSQL 17 aislado en Docker | `pnpm db:migrate && pnpm test:integration` |
-| E | Aplicación Docker, Chromium escritorio y Pixel 7 | `E2E_EXTERNAL_SERVER=1 E2E_BASE_URL=http://127.0.0.1:3000 pnpm test:e2e` |
+| E | Next.js local, PostgreSQL 17 desechable, Chromium escritorio y Pixel 7 | `NODE_ENV=test E2E_EXTERNAL_SERVER=1 pnpm test:e2e` (14 pasan y 2 pruebas visuales quedan omitidas salvo actualización explícita) |
+| V | Chromium y datos sintéticos | `UPDATE_UI_SCREENSHOTS=true pnpm exec playwright test tests/e2e/visual-evidence.spec.ts --project=chromium-desktop` (18 capturas; 390/1024/1440, claro/oscuro) |
 | B | macOS y Docker | `pnpm lint && pnpm typecheck && pnpm build`; `docker build` |
 | P | Docker aislado | reinicio, respaldo y restauración descritos en `docs/DEPLOY-COOLIFY.md` |
 
@@ -49,7 +50,7 @@ Fecha de última ejecución local: 3 de octubre de 2026, `America/Guayaquil`. Lo
 | C30 | Totales de referencia del informe | R | PASS | 880=730+150, deuda 155+295=450, 13 vs 14; marcados provisionales. |
 | C31 | Reimportación no duplica | I, R | PASS | Segundo XLSX idéntico devuelve el mismo lote; staging sintético persiste exactamente 2 hojas, 2 filas y 4 celdas; promoción/reintento mantiene publicaciones únicas. |
 | C32 | Período sin fecha bancaria | U, I | PASS | LEGACY conserva período, `movementId`/`receivedAt`/`appliedAt` nulos y no crea caja. |
-| C33 | Jefe intenta otra cuerda | U | PARCIAL | Autorización por objeto rechaza otra cuerda; falta E2E autenticado de URL/API/exportación. |
+| C33 | Jefe intenta otra cuerda | U, E | PASS | Jefatura autenticada ve solo Soprano E2E, no ve Tenor E2E y el reporte financiero redirige a `sin-acceso`; exportación reutiliza el mismo servicio con alcance. |
 | C34 | Miembro altera `memberId` | U | PASS | `canAccessMember` solo permite su ficha y las acciones vuelven a resolver acceso en servidor. |
 | C35 | Anónimo/adjunto/caché | E + inspección | PARCIAL | Anónimo recibe 401 y adjunto autorizado usa `private, no-store`; falta descarga E2E autenticada cruzada. |
 | C36 | Cambio de rol revoca sesión | I | PASS | Reemplazo de roles elimina sesiones en la misma transacción. |
@@ -62,12 +63,14 @@ Fecha de última ejecución local: 3 de octubre de 2026, `America/Guayaquil`. Lo
 | C43 | Reinicio conserva DB y adjunto | P | PASS | Reinicio y recreación conservaron 4 miembros, 1 usuario, 1 adjunto y SHA-256 `4222f014…`; archivo 1001:1001 modo 600. |
 | C44 | Restauración separada | P | PASS | Dump y volumen restaurados en DB/app/volúmenes nuevos: salud 200, mismos conteos, 3 migraciones y descarga autenticada `private, no-store` con hash idéntico. |
 | C45 | Falta configuración esencial | B | PASS | Validación de entorno y Compose fallan de forma segura; no hay credenciales demo. |
-| C46 | Cambiar corte no mezcla caja/períodos | inspección | PARCIAL | Dashboard filtra cargos por período y caja por movimientos; falta prueba de frontera automatizada. |
+| C46 | Cambiar corte no mezcla caja/períodos | I, E | PASS | Fixture separa apertura de agosto, flujo de septiembre y cargos por período; dashboard enlaza al reporte conservando `period=2026-09`. |
 | C47 | Compra de actividad y recuperación | I | PASS | Gasto enlazado y movimientos separados; transferencia interna no duplica ingreso. |
-| C48 | Menú oculto no abre endpoint | U, E | PARCIAL | Acciones/endpoints autentican en servidor; falta E2E de todos los roles. |
+| C48 | Menú oculto no abre endpoint | U, E | PASS | E2E autenticado verifica tesorería, jefatura y miembro; ocultar enlace no concede acceso y la URL financiera queda bloqueada para jefatura. |
 | C49 | X de deuda vs X mensual | R | PASS | Semánticas distintas verificadas. |
 | C50 | Filas ambiguas visibles y no aprobables | U, I | PASS | Cero pendientes exigido; hash/version y vista previa bloquean ambigüedad u obsolescencia. |
 
 ## Lectura del resultado
 
 Los criterios `PARCIAL` no bloquean la construcción o el despliegue técnico con migración real deshabilitada, pero sí bloquean declarar aceptación operativa completa. C43 y C44 pasaron con datos sintéticos en recursos aislados; esto no sustituye un respaldo externo del entorno productivo. Los comprobantes reales y los datos históricos permanecen fuera de CI y fuera de Git.
+
+La revisión visual adicional R01–R04 está cerrada con Playwright: `Enter` abre detalle, el modal atrapa/devuelve foco y cierra con `Escape`, los enlaces conservan alcance y no existe desborde global a 390 px. Detalle y capturas: `docs/REVISION-INTERFAZ.md` y `docs/evidencia-ui/`.
