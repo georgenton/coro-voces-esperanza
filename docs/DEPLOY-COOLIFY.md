@@ -1,20 +1,20 @@
 # Despliegue en Coolify
 
-La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare. La fase de datos e informes del PR 6 se desplegó el 3 de octubre; la rama visual `codex/interfaz-reportes` no está desplegada.
+La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare. `main` contiene los datos e informes aprobados en el PR 6; la interfaz de la PR 7 sigue abierta, sin desplegar.
 
 ## Estado de producción verificado
 
 - Proyecto Coolify: `Voces de Esperanza` (`curszcfgrj5qgqoalyjpjfx1`), entorno `production` (`hqjrkmlxe1xybokuktovevmb`).
-- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, commit desplegado `b0a71f3974e6cf8969e6c7e4244e64d645733263`.
+- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, commit funcional desplegado `b0a71f3974e6cf8969e6c7e4244e64d645733263`.
 - PostgreSQL 17 privado: `voces-postgres` (`cw9lgsmko0t2rnramfsrqmrm`), base `voces_esperanza`, sin puerto público.
 - Volumen de adjuntos: `qwag6glb0gc6jfzlfwa46fi4-voces-uploads` en `/data/uploads`.
 - HTTPS externo: `/api/health` respondió 200 con `{"status":"healthy"}`, `Cache-Control: no-store` y `X-Robots-Tag: noindex, nofollow`.
 - Migraciones en producción: 4 aplicadas y al día para el commit desplegado.
-- Estado verificado el 3 de octubre antes de desplegar esta rama: 1 usuario administrador activo, 1 sesión y 1 auditoría; 0 miembros, lotes, filas, publicaciones, cargos, partes de pago, aplicaciones y movimientos. Los catálogos base permanecen separados.
+- Estado agregado comprobado mediante el respaldo posterior a la rotación: 1 usuario administrador y 0 sesiones, miembros, filas importadas, cargos, partes de pago, aplicaciones, movimientos y adjuntos. Los catálogos base permanecen separados.
 - La imagen final incluye `curl` para el healthcheck interno de Coolify. El primer intento sin esa dependencia falló de forma segura y Coolify retiró el contenedor no saludable; el segundo quedó `healthy`.
 - El PR 4 añadió el bootstrap interactivo del SUPERADMIN. Coolify desplegó el merge `786d8aa` en 3m48s con estado `Success`; después `/api/health` respondió 200 por HTTPS con `no-store` y `noindex`. El SUPERADMIN ya fue activado en el flujo privado.
 - Antes del PR 6 se ejecutó un respaldo manual (`Success`, 102.73 KB) y se comprobó que las tablas operativas seguían vacías. El despliegue manual `iyizordbdpqfd9aaqfmq5qvy` publicó `b0a71f3` en 4m01s con estado `Success`; `/api/health` respondió 200 y `{"status":"healthy"}`.
-- Coolify muestra “Deploy on push”, pero el merge 6 no produjo un despliegue y GitHub no mostró un webhook del repositorio. Hasta reparar y probar ese enlace, los despliegues requieren verificación y disparo manual.
+- El merge 6 no produjo un despliegue y GitHub no mostró un webhook del repositorio. Se corrigió la expectativa a `Manual deployments only`; los despliegues requieren verificación y disparo manual.
 
 ## 1. Recursos
 
@@ -38,7 +38,7 @@ Definir en Coolify, sin guardarlas en Git:
 
 La aplicación falla de forma segura si faltan base de datos o secretos. No hay contraseña demo de producción.
 
-Los secretos anteriores son de runtime y no deben inyectarse como argumentos de build ni imprimirse en logs de construcción. La configuración actual de Coolify debe auditarse y los secretos potencialmente expuestos deben rotarse antes del piloto; no copiar sus valores a incidencias, documentación o PR.
+En Coolify todas las variables de esta aplicación deben quedar disponibles en runtime y no en buildtime. La inyección automática de argumentos de build está deshabilitada. Consultar `docs/SEGURIDAD-OPERATIVA.md` para la revisión sanitizada y la rotación del 4 de octubre.
 
 ## 3. Construcción y migraciones
 
@@ -62,7 +62,7 @@ El healthcheck es `GET /api/health`. Solo responde saludable cuando PostgreSQL a
 
 ## 5. Tarea programada
 
-Después de configurar día y hora desde la aplicación, programar una llamada diaria:
+Después de configurar día y hora desde la aplicación, se puede programar una llamada diaria:
 
 ```bash
 curl --fail --request POST 'https://coro.syntavera.dev/api/cron/rehearsals' \
@@ -70,6 +70,8 @@ curl --fail --request POST 'https://coro.syntavera.dev/api/cron/rehearsals' \
 ```
 
 La tarea es idempotente. Abrir el módulo de asistencia también recupera sesiones faltantes si la tarea no corrió.
+
+Al 4 de octubre no existe una tarea programada en Coolify. Si se crea, el comando debe leer `CRON_SECRET` del entorno del contenedor; no debe copiar el valor literal a la tarea, documentación o logs.
 
 ## 6. Respaldo y restauración
 
@@ -88,9 +90,11 @@ Restaurar primero en un PostgreSQL separado, montar una copia del volumen y comp
 4. cargos, aplicaciones y movimientos mantienen los mismos conteos;
 5. la aplicación no apunta a la base de producción durante la prueba.
 
-No se declara una restauración probada hasta ejecutar este procedimiento con un respaldo real autorizado.
+En Coolify quedó habilitado el respaldo de `voces_esperanza` a las 03:00 `America/Guayaquil`, con copia local y en `SyntaVera R2 Backups`, retención de 14 copias/14 días en ambos destinos y detector de ausencia después de 26 horas. Después de rotar la credencial del motor, una ejecución manual terminó `Success`, tamaño 109.44 KB y disponibilidad local + S3. Los canales salientes globales están deshabilitados, así que el detector todavía no produce una notificación comprobada.
 
-En Coolify quedó habilitado el respaldo de `voces_esperanza` a las 03:00 `America/Guayaquil`, con retención local de 14 copias/14 días y alerta después de 26 horas. La primera ejecución manual terminó `Success`, tamaño 101.92 KB y disponibilidad local. Sigue pendiente una copia externa aprobada: este respaldo está fuera del contenedor, pero en el mismo host y no cubre la pérdida completa del servidor.
+El volumen `/data/uploads` se respalda a las 03:05, deteniendo el contenedor durante el archivo para obtener un corte consistente. Conserva 14 copias/14 días localmente y en el mismo destino S3. La primera ejecución terminó `Success`, tamaño 137 B, lo que concuerda con cero adjuntos productivos.
+
+El destino R2 es compartido por otros recursos de SyntaVera y separa al coro por ruta, no mediante un bucket/principal dedicado. Cambiar el alcance de credenciales o activar notificaciones requiere una decisión sobre configuración global compartida y no se realizó en esta intervención.
 
 ## 7. Evidencia del simulacro aislado
 
@@ -104,3 +108,19 @@ El 1 de octubre de 2026 se probó la imagen local del commit `e0065642b3fff6c77e
 - Resultado restaurado: health 200; mismos conteos; adjunto con SHA-256 `4222f014…`, propietario `1001:1001`, modo `600`; inicio de sesión sintético y descarga autorizada con `Cache-Control: private, no-store`.
 
 El respaldo del simulacro permanece en el mismo equipo; prueba el procedimiento, no resiliencia ante pérdida completa del servidor. En producción debe copiarse a almacenamiento externo aprobado y probarse periódicamente en recursos separados.
+
+El 4 de octubre se descargó el dump real posterior a la rotación y se restauró con PostgreSQL 17 en un contenedor temporal, sin red y con almacenamiento en memoria. `pg_restore --exit-on-error` terminó correctamente y se comprobaron 42 tablas y conteos agregados coherentes con el estado vacío de datos operativos. El mismo registro de Coolify figura `Local Available` y `S3 Available`; como el botón no informa cuál origen atendió la descarga, todavía falta repetir el simulacro forzando la lectura desde R2 después de una pérdida simulada de la copia local.
+
+## 8. Despliegue manual controlado
+
+Este recurso usa la fuente `Public GitHub`; la GitHub App disponible no está seleccionada y no se confirmó un webhook activo. Los merges anteriores tampoco acreditaron auto despliegue. Se configuró `Manual deployments only` y se deshabilitó la inyección automática de variables como argumentos del build.
+
+Procedimiento:
+
+1. comprobar CI del SHA de `main` y registrar el commit;
+2. confirmar respaldo reciente y variables runtime-only;
+3. ejecutar `Redeploy` en Coolify;
+4. verificar commit, estado `Success`, health interno, health HTTPS y consulta real a PostgreSQL;
+5. conservar logs y usar el rollback automático de rolling update si el contenedor nuevo no queda saludable.
+
+No desplegar previews ni la PR 7 hasta aprobación visual explícita. Un despliegue aceptado por Coolify no sustituye estas comprobaciones.

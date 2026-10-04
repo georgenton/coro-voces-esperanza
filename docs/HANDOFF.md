@@ -1,6 +1,6 @@
 # Handoff vigente
 
-Fecha: 3 de octubre de 2026, `America/Guayaquil`.
+Fecha: 4 de octubre de 2026, `America/Guayaquil`.
 
 ## Autorización recibida
 
@@ -18,6 +18,7 @@ Jorge autorizó para este proyecto: commits y push, ramas/PR, merge a `main` con
 - `private/`, Excel/CSV, diagnóstico confidencial, entornos, adjuntos, respaldos y artefactos de pruebas/build siguen ignorados por Git y Docker.
 - El trabajo de datos e informes se integró mediante el PR 6 como merge `b0a71f3974e6cf8969e6c7e4244e64d645733263` y se desplegó manualmente en Coolify después de respaldo y preflight.
 - La integración visual se desarrolla por separado en `codex/interfaz-reportes`; no se ha fusionado ni desplegado y requiere aprobación humana.
+- La corrección operativa se integró en `main` mediante el PR 8 (`0dd450e`); sus cambios versionados son documentación y su configuración afecta solo al recurso del coro.
 
 ## Cambio funcional de la fase de datos integrada
 
@@ -42,14 +43,17 @@ No se promovió, aprobó ni publicó ningún saldo, identidad de miembro, fecha 
 - Build productivo, 37 reglas de referencia y 6 E2E pasaron antes del PR 6. Coolify desplegó manualmente el merge, aplicó la cuarta migración y terminó `Success` en 4m01s.
 - La imagen del commit funcional es `voces-esperanza:e006564`, digest local `sha256:8b108e710da7c8293fa7b7e267e206deffffba9033fdfc3a9cf30ddabe925684`.
 - Persistencia y restauración pasaron con datos y adjunto sintéticos en recursos separados; ver `docs/DEPLOY-COOLIFY.md`.
-- Producción: `https://coro.syntavera.dev`, commit `b0a71f3`, despliegue Coolify `Success` y health externo 200 con `{"status":"healthy"}`, `no-store` y `noindex`.
+- Producción: `https://coro.syntavera.dev`, rama `main`, commit funcional `b0a71f3`, despliegue Coolify `Success` y health externo 200 con `{"status":"healthy"}`, `no-store` y `noindex`. La interfaz de la PR 7 no forma parte de producción.
 - Coolify: proyecto `curszcfgrj5qgqoalyjpjfx1`, entorno `hqjrkmlxe1xybokuktovevmb`, app `qwag6glb0gc6jfzlfwa46fi4`, PostgreSQL `cw9lgsmko0t2rnramfsrqmrm`.
 - DNS: se usó el registro ya existente de `coro.syntavera.dev`; no se modificó Cloudflare ni se tocó `cintavera.dev`.
-- Respaldo `qpat2ip0sang71p3yfh0muwz`: diario a las 03:00; el respaldo manual anterior al merge 6 terminó `Success` (102.73 KB). La copia es local al host y no sustituye un respaldo externo.
+- Respaldo `qpat2ip0sang71p3yfh0muwz`: diario a las 03:00, copia local + R2, retención de 14 copias/14 días y detector después de 26 horas. El respaldo posterior a la rotación terminó `Success` con 109.44 KB. No hay canal saliente global habilitado para entregar la alerta.
+- `/data/uploads`: respaldo diario a las 03:05, corte consistente, copia local + R2 y retención de 14 copias/14 días. El volumen productivo está vacío; la primera copia fue de 137 B.
+- Se restauró el dump posterior a la rotación en PostgreSQL 17 temporal, sin red y en memoria. La descarga figuraba disponible local y S3; sigue pendiente forzar la recuperación exclusivamente desde R2.
+- Coolify quedó en despliegue manual controlado, sin previews y sin inyección automática de variables runtime como argumentos de build. Cuatro secretos del coro se rotaron y una sesión se revocó; ver `docs/SEGURIDAD-OPERATIVA.md`.
 - El acceso inicial ya está activo. No volver a ejecutar bootstrap salvo recuperación autorizada; no publicar identidad, contraseña, token ni enlace privado en documentación, GitHub, Notion o chat.
 
 ## Integración visual pendiente de aprobación
 
 Los artefactos de diseño recibidos el 3 de octubre sí se revisaron y su lenguaje visual se trasladó a componentes Next.js reales. La rama `codex/interfaz-reportes` contiene dashboard, reporte mensual y matriz anual conectados a servicios reales, tema claro/oscuro, panel accesible y E2E autenticado por rol. Los ZIP/HTML de demostración no entraron al runtime.
 
-Esta rama visual debe mantenerse en un PR separado y abierto. No fusionarla ni desplegarla antes de la revisión de Jorge. La configuración de Coolify muestra despliegue por push, pero no se encontró un webhook de GitHub y el merge 6 no inició despliegue automático; se usó redeploy manual. Además, la configuración de build debe revisarse para que secretos runtime no aparezcan como argumentos de construcción; rotar cualquier secreto potencialmente expuesto antes del piloto sin publicar sus valores.
+La interfaz de Claude está implementada en la PR 7 y tiene CI aprobado, pero Jorge aún no ha dado aprobación visual. Mantenerla abierta, sin merge y sin despliegue. La revisión local usa datos sintéticos y autenticación; no usa credenciales personales ni promueve el Excel. Coolify quedó en despliegue manual y los secretos se retiraron del build y se rotaron antes de esta revisión.

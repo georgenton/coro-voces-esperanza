@@ -78,6 +78,7 @@ La vista **Histórico fuente** permite revisar hojas, filas, celdas, fórmulas, 
 - `docs/INFORME-IMPORTACION.md`: estado no nominativo del importador.
 - `docs/ESTADO-IMPLEMENTACION.md`: alcance implementado, evidencia ejecutada y pendientes reales.
 - `docs/DEPLOY-COOLIFY.md`: despliegue, dominio, volumen, cron y restauración.
+- `docs/SEGURIDAD-OPERATIVA.md`: alcance sanitizado de secretos, rotación, backups y despliegue manual.
 - `docs/CONTRATO-PROMOCION.md`: contrato de staging, aprobación, vista previa y publicación.
 - `docs/MATRIZ-C01-C50.md`: trazabilidad de cada criterio a prueba, comando y evidencia.
 - `docs/REVISION-INTERFAZ.md`: procedencia del diseño, integración real, R01–R04 y evidencia responsive.

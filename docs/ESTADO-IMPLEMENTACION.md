@@ -1,6 +1,6 @@
 # Estado de implementación
 
-Fecha de corte: 3 de octubre de 2026.
+Fecha de corte: 4 de octubre de 2026.
 
 ## Implementado
 
@@ -41,9 +41,10 @@ Fecha de corte: 3 de octubre de 2026.
 - Construcción de imagen Docker y arranque real: migraciones sin pendientes y `/api/health` saludable.
 - Simulacro aislado de persistencia y restauración: reinicio y recreación conservaron PostgreSQL y el adjunto; dump/volumen se restauraron en recursos nuevos con los mismos conteos, hash, propietario/modo y descarga autenticada sin caché compartida.
 - GitHub Actions pasó dos veces sobre el cambio funcional y dos veces sobre la corrección del healthcheck: lint, tipos, unitarias, referencia, migraciones, integración, build, E2E y construcción Docker.
-- Producción en `https://coro.syntavera.dev`: HTTPS y página de acceso 200, health externo 200, health interno de Coolify `healthy`, PostgreSQL privado y volumen persistente.
-- Antes del despliegue de la fase de datos, producción conservaba 0 miembros, lotes, filas, publicaciones, cargos, partes, aplicaciones y movimientos; 1 usuario administrador, 1 sesión y 1 auditoría. El PR 6 se integró y desplegó con respaldo previo, cuarta migración y health externo 200. Esa migración solo añade estructura; no ejecuta seed ni promueve histórico.
-- Respaldo PostgreSQL programado diariamente y primera ejecución manual exitosa; la retención es local al host.
+- Producción en `https://coro.syntavera.dev`: rama `main`, commit funcional `b0a71f3`, health externo 200 e interno `healthy`; la PR 7 continúa abierta, sin fusionar ni desplegar.
+- Los cuatro secretos que aparecieron como argumentos de un build anterior se excluyeron del build, se rotaron y se comprobaron como runtime-only. Una sesión del coro se revocó; no se cambiaron usuarios ni contraseñas personales. Ver `docs/SEGURIDAD-OPERATIVA.md`.
+- El respaldo real posterior a la rotación terminó `Success` con disponibilidad local + S3 y se restauró con PostgreSQL 17 en un recurso temporal sin red. La copia independiente forzada desde R2 sigue pendiente porque Coolify no expone cuál origen usa su descarga cuando ambos están disponibles.
+- La restauración confirmó 42 tablas, 1 usuario y cero sesiones, miembros, filas importadas, cargos, partes, aplicaciones, movimientos y adjuntos. No se promovió el Excel.
 
 ## Pendiente de evidencia o decisión humana
 
@@ -51,10 +52,9 @@ Fecha de corte: 3 de octubre de 2026.
 - La transformación definitiva ya está implementada, pero ningún dato real fue aprobado ni promovido. Revertir una importación ya usada por operaciones posteriores sigue requiriendo ajustes/reversos auditados, no borrado.
 - No se probaron comprobantes bancarios reales ni el proveedor de visión; sin clave, el flujo manual permanece funcional.
 - El SUPERADMIN inicial ya está activo y se mantiene fuera del repositorio. No se expusieron identidad, contraseña, sesión ni secretos durante esta revisión.
-- La integración visual está implementada en `codex/interfaz-reportes`, pero permanece sin merge y sin despliegue hasta la aprobación de Jorge. Ver `docs/REVISION-INTERFAZ.md`.
-- Coolify no inició automáticamente el despliegue del merge 6 pese a mostrar “Deploy on push”; falta reparar/verificar el webhook. También debe evitarse que secretos runtime lleguen a argumentos/logs de build y rotar cualquier secreto potencialmente expuesto antes del piloto.
-- Falta configurar almacenamiento externo para copias y ejecutar un simulacro de restauración usando un respaldo real de producción en un host separado.
+- La interfaz de Claude está integrada en `codex/interfaz-reportes` y la PR 7 conserva su revisión visual pendiente. No está fusionada ni desplegada; ver `docs/REVISION-INTERFAZ.md`.
+- PostgreSQL y `/data/uploads` ya tienen copia externa en R2. Falta probar una descarga forzada desde R2 sin copia local y, cuando existan adjuntos reales, repetir su restauración; el volumen actual está vacío.
 - La matriz C01–C50 está documentada. Persisten coberturas parciales que requieren E2E autenticado por rol, comprobantes reales aprobados y validación operativa; ver `docs/MATRIZ-C01-C50.md`.
 - El estado de despliegue, URL, commit e imagen se registra en `docs/DEPLOY-COOLIFY.md`; la migración histórica real continúa bloqueada hasta aprobación humana.
 
-No se afirma conciliación bancaria, saldos aprobados, respaldo externo probado ni aceptación operativa completa.
+No se afirma conciliación bancaria, saldos aprobados, recuperación total ante pérdida del host ni aceptación operativa completa.
