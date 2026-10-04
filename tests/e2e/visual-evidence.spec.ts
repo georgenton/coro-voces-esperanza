@@ -19,9 +19,9 @@ test("genera evidencia responsive clara y oscura con datos sintéticos", async (
   const output = path.join(process.cwd(), "docs", "evidencia-ui");
   await mkdir(output, { recursive: true });
   const screens = [
-    { name: "dashboard", route: "/resumen?period=2026-09", heading: "Resumen del coro" },
-    { name: "movimientos", route: "/reportes/movimientos?period=2026-09", heading: "Reporte mensual" },
-    { name: "cuotas", route: "/reportes/cuotas?year=2026&cutoff=2026-09", heading: "Matriz anual de cuotas" },
+    { name: "dashboard", route: "/resumen?period=2026-09&source=operation", heading: "Resumen del coro" },
+    { name: "movimientos", route: "/reportes/movimientos?period=2026-09&source=operation", heading: "Reporte mensual" },
+    { name: "cuotas", route: "/reportes/cuotas?year=2026&cutoff=2026-09&source=operation", heading: "Matriz anual de cuotas" },
   ];
   for (const theme of ["light", "dark"] as const) {
     await page.evaluate((value) => {

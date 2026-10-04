@@ -18,7 +18,7 @@ type DashboardData = {
 };
 
 function annualUrl(period: string, sectionId?: string | null) {
-  const params = new URLSearchParams({ year: period.slice(0, 4), cutoff: period });
+  const params = new URLSearchParams({ year: period.slice(0, 4), cutoff: period, source: "operation" });
   if (sectionId) params.set("section", sectionId);
   return `/reportes/cuotas?${params.toString()}`;
 }
@@ -54,8 +54,8 @@ export function DashboardSummary({
       </section>
 
       {finance ? <section className="section grid grid-2">
-        <article className="card"><div className="section-header"><div><p className="eyebrow">Flujo confirmado</p><h2>Tendencia de seis meses</h2></div><Link className="card-link" href={`/reportes/movimientos?period=${period}`}>Abrir {period} →</Link></div>
-          <div className="trend-chart" aria-label="Ingresos y egresos de los últimos seis meses">{data.monthlyTrend.map((item) => <Link className="trend-group" href={`/reportes/movimientos?period=${item.period}`} key={item.period} title={`Abrir reporte de ${item.period}`}>
+        <article className="card"><div className="section-header"><div><p className="eyebrow">Flujo confirmado</p><h2>Tendencia de seis meses</h2></div><Link className="card-link" href={`/reportes/movimientos?period=${period}&source=operation`}>Abrir {period} →</Link></div>
+          <div className="trend-chart" aria-label="Ingresos y egresos de los últimos seis meses">{data.monthlyTrend.map((item) => <Link className="trend-group" href={`/reportes/movimientos?period=${item.period}&source=operation`} key={item.period} title={`Abrir reporte de ${item.period}`}>
             <span className="trend-bars"><span className="trend-bar trend-income" style={{ height: item.incomeCents ? `${Math.max(3, item.incomeCents / maxTrend * 100)}%` : 0 }} aria-label={`Ingresos ${formatUsd(item.incomeCents)}`} /><span className="trend-bar trend-expense" style={{ height: item.expenseCents ? `${Math.max(3, item.expenseCents / maxTrend * 100)}%` : 0 }} aria-label={`Egresos ${formatUsd(item.expenseCents)}`} /></span><small>{item.period.slice(5)}</small>
           </Link>)}</div>
           <div className="chart-legend"><span><i className="legend-income"/> Ingresos</span><span><i className="legend-expense"/> Egresos</span></div>

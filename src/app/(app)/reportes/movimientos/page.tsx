@@ -1,19 +1,22 @@
 import Link from "next/link";
 import { AppRole, MovementType } from "@/generated/prisma/client";
 import { Notice } from "@/components/notice";
+import { HistoricalMonthlyLedger } from "@/components/reports/historical-monthly-ledger";
 import { MonthlyLedger } from "@/components/reports/monthly-ledger";
+import { ReportSourceSwitcher } from "@/components/reports/report-source-switcher";
 import { StatusPill } from "@/components/status-pill";
 import { requireAccess } from "@/lib/access";
 import { formatLocalDate, formatLocalDateNumeric } from "@/lib/dates";
 import { formatUsd } from "@/lib/money";
 import { getMonthlyAccountReport } from "@/server/reports/monthly-account";
+import { getHistoricalMonthlyReport, resolveReportSource } from "@/server/reports/historical";
 
 function currentPeriod() {
   return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", timeZone: "America/Guayaquil" }).format(new Date()).slice(0, 7);
 }
 
 function reportUrl(input: { period: string; accountId?: string; movementType?: string; query?: string; page?: number }) {
-  const params = new URLSearchParams({ period: input.period });
+  const params = new URLSearchParams({ period: input.period, source: "operation" });
   if (input.accountId) params.set("account", input.accountId);
   if (input.movementType) params.set("type", input.movementType);
   if (input.query) params.set("q", input.query);
@@ -41,13 +44,38 @@ const movementTypeLabels: Record<string, string> = {
 export default async function MonthlyMovementsReport({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; account?: string; type?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ period?: string; source?: string; account?: string; type?: string; q?: string; page?: string }>;
 }) {
-  await requireAccess([AppRole.SUPERADMIN, AppRole.ADMIN, AppRole.TESORERIA]);
+  const access = await requireAccess([AppRole.SUPERADMIN, AppRole.ADMIN, AppRole.TESORERIA]);
   const params = await searchParams;
   const period = /^\d{4}-(0[1-9]|1[0-2])$/.test(params.period ?? "") ? params.period! : currentPeriod();
+  const sourceContext = await resolveReportSource(access, params.source);
+
+  if (sourceContext.source === "historical" && sourceContext.batchId) {
+    const historical = await getHistoricalMonthlyReport({ batchId: sourceContext.batchId, period, query: params.q, page: Number(params.page) });
+    const historyUrl = (page: number) => {
+      const query = new URLSearchParams({ period: historical.period, source: "historical" });
+      if (params.q) query.set("q", params.q);
+      if (page > 1) query.set("page", String(page));
+      return `/reportes/movimientos?${query.toString()}`;
+    };
+    return (
+      <div className="page page-wide">
+        <header className="page-header"><div><p className="eyebrow">Hoja mensual real · pendiente de validación</p><h1>Reporte mensual</h1><p className="lede">Lectura literal del Excel con procedencia por hoja, fila y celda. Los agregados y saldos de apertura quedan fuera de los totales de filas candidatas.</p></div><a className="button button-secondary" href={`/api/export/movements?period=${historical.period}&source=historical${params.q ? `&q=${encodeURIComponent(params.q)}` : ""}`}>Exportar fuente CSV</a></header>
+        <ReportSourceSwitcher source="historical" pathname="/reportes/movimientos" params={{ period: historical.period, q: params.q }}/>
+        <section className="card filter-card"><form className="report-filters"><input type="hidden" name="source" value="historical"/><div className="field"><label htmlFor="period">Año y mes</label><input id="period" name="period" type="month" defaultValue={historical.period}/></div><div className="field filter-search"><label htmlFor="q">Buscar en la fila original</label><input id="q" name="q" defaultValue={params.q ?? ""} maxLength={100}/></div><button className="button">Aplicar filtros</button></form></section>
+        {!historical.sheet ? <Notice warning="No existe una hoja mensual documentada para este período."/> : historical.sheet.coverageStatus === "PARTIAL" ? <Notice warning="Octubre de 2026 es parcial al corte declarado; estos importes no equivalen a un cierre conciliado."/> : <Notice warning="Fuente histórica pendiente de validación. Ninguna fila de esta tabla es un movimiento operativo todavía."/>}
+        <section className="section grid grid-4"><article className="card"><div className="metric-label">Ingresos documentados</div><div className="metric-value amount-income">{formatUsd(historical.totals.incomeCents)}</div><div className="metric-note">Solo columna C de filas candidatas</div></article><article className="card"><div className="metric-label">Egresos documentados</div><div className="metric-value amount-expense">{formatUsd(historical.totals.expenseCents)}</div><div className="metric-note">Solo columna E de filas candidatas</div></article><article className="card"><div className="metric-label">Filas visibles</div><div className="metric-value">{historical.pagination.totalRows}</div><div className="metric-note">Incluye contexto de apertura identificado</div></article><article className="card"><div className="metric-label">Revisiones de la hoja</div><div className="metric-value">{historical.issueCount ?? 0}</div><div className="metric-note">Sin resolver en staging</div></article></section>
+        {historical.openingRows.length ? <section className="section source-context"><strong>Contexto de apertura conservado, no sumado:</strong> {historical.openingRows.map((row) => <span key={row.id}>{row.sheetName}!fila {row.rowNumber}{row.contextAmount ? ` · ${row.contextAmount}` : ""}</span>)}</section> : null}
+        <HistoricalMonthlyLedger rows={historical.rows}/>
+        <div className="actions section">{historical.pagination.page > 1 ? <Link className="button button-secondary" href={historyUrl(historical.pagination.page - 1)}>Anterior</Link> : null}<span className="small muted">Página {historical.pagination.page} de {historical.pagination.totalPages}</span>{historical.pagination.page < historical.pagination.totalPages ? <Link className="button button-secondary" href={historyUrl(historical.pagination.page + 1)}>Siguiente</Link> : null}</div>
+        <p className="small muted section">Lote {historical.batch.sha256.slice(0, 12)}… · {historical.sheet?.name ?? "sin hoja"}. La exportación conserva esta misma separación de fuente.</p>
+      </div>
+    );
+  }
+
   const report = await getMonthlyAccountReport({ period, accountId: params.account, movementType: params.type, query: params.q, page: Number(params.page) });
-  const exportParams = new URLSearchParams({ period });
+  const exportParams = new URLSearchParams({ period, source: "operation" });
   if (report.accountId) exportParams.set("account", report.accountId);
   if (report.movementType) exportParams.set("type", report.movementType);
   if (report.query) exportParams.set("q", report.query);
@@ -59,7 +87,9 @@ export default async function MonthlyMovementsReport({
         <a className="button button-secondary" href={`/api/export/movements?${exportParams.toString()}`}>Exportar CSV</a>
       </header>
 
-      <section className="card filter-card"><form className="report-filters"><div className="field"><label htmlFor="period">Año y mes</label><input id="period" name="period" type="month" defaultValue={period}/></div><div className="field"><label htmlFor="account">Cuenta</label><select id="account" name="account" defaultValue={report.accountId ?? ""}><option value="">Todas las cuentas</option>{report.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div className="field"><label htmlFor="type">Tipo</label><select id="type" name="type" defaultValue={report.movementType ?? ""}><option value="">Todos los tipos</option>{Object.values(MovementType).map((type) => <option key={type} value={type}>{movementTypeLabels[type] ?? type}</option>)}</select></div><div className="field filter-search"><label htmlFor="q">Buscar detalle, referencia o cuenta</label><input id="q" name="q" defaultValue={report.query ?? ""} maxLength={100}/></div><button className="button">Aplicar filtros</button></form></section>
+      <ReportSourceSwitcher source="operation" pathname="/reportes/movimientos" params={{ period, account: report.accountId, type: report.movementType, q: report.query }}/>
+
+      <section className="card filter-card"><form className="report-filters"><input type="hidden" name="source" value="operation"/><div className="field"><label htmlFor="period">Año y mes</label><input id="period" name="period" type="month" defaultValue={period}/></div><div className="field"><label htmlFor="account">Cuenta</label><select id="account" name="account" defaultValue={report.accountId ?? ""}><option value="">Todas las cuentas</option>{report.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div className="field"><label htmlFor="type">Tipo</label><select id="type" name="type" defaultValue={report.movementType ?? ""}><option value="">Todos los tipos</option>{Object.values(MovementType).map((type) => <option key={type} value={type}>{movementTypeLabels[type] ?? type}</option>)}</select></div><div className="field filter-search"><label htmlFor="q">Buscar detalle, referencia o cuenta</label><input id="q" name="q" defaultValue={report.query ?? ""} maxLength={100}/></div><button className="button">Aplicar filtros</button></form></section>
 
       {report.coverageState === "PARTIAL" ? <Notice warning="El período está documentado como parcial; sus totales no equivalen a un cierre mensual." /> : null}
       {report.coverageState === "NOT_IMPORTED" ? <Notice warning="Existe una hoja histórica para este período, pero sus filas no han sido promovidas como movimientos operativos." /> : null}

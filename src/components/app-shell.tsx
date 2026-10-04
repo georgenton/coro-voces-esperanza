@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Database, Music2, UserRound } from "lucide-react";
 import { AppRole } from "@/generated/prisma/client";
 import type { AccessContext } from "@/lib/access";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -7,27 +8,27 @@ import { AppNavigation, type NavigationLink } from "@/components/app-navigation"
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const fullNavigation = [
-  { href: "/resumen", label: "Resumen", icon: "⌂" },
-  { href: "/miembros", label: "Miembros", icon: "♩" },
-  { href: "/cuotas", label: "Cuotas", icon: "$" },
-  { href: "/movimientos", label: "Movimientos", icon: "↕" },
-  { href: "/reportes/cuotas", label: "Matriz anual", icon: "▦" },
-  { href: "/reportes/movimientos", label: "Reporte mensual", icon: "≋" },
-  { href: "/conciliar", label: "Conciliar", icon: "✓" },
-  { href: "/importar", label: "Importar Excel", icon: "⇧" },
-  { href: "/reportes/historico", label: "Histórico fuente", icon: "◷" },
-  { href: "/actividades", label: "Actividades", icon: "◇" },
-  { href: "/asistencia", label: "Asistencia", icon: "▣" },
-  { href: "/incidencias", label: "Incidencias", icon: "!" },
-  { href: "/configuracion", label: "Configuración", icon: "⚙" },
+  { href: "/resumen", label: "Resumen", icon: "dashboard" },
+  { href: "/miembros", label: "Miembros", icon: "members" },
+  { href: "/cuotas", label: "Cuotas", icon: "dues" },
+  { href: "/movimientos", label: "Movimientos", icon: "movements" },
+  { href: "/reportes/cuotas", label: "Matriz anual", icon: "matrix" },
+  { href: "/reportes/movimientos", label: "Reporte mensual", icon: "report" },
+  { href: "/conciliar", label: "Conciliar", icon: "reconcile" },
+  { href: "/importar", label: "Importar Excel", icon: "import" },
+  { href: "/reportes/historico", label: "Histórico fuente", icon: "history" },
+  { href: "/actividades", label: "Actividades", icon: "activities" },
+  { href: "/asistencia", label: "Asistencia", icon: "attendance" },
+  { href: "/incidencias", label: "Incidencias", icon: "incidents" },
+  { href: "/configuracion", label: "Configuración", icon: "settings" },
 ] satisfies NavigationLink[];
 
 const memberNavigation = [
-  { href: "/resumen", label: "Mi resumen", icon: "⌂" },
-  { href: "/reportes/cuotas", label: "Mis cuotas", icon: "▦" },
-  { href: "/mi-cuenta", label: "Mi cuenta", icon: "$" },
-  { href: "/mi-asistencia", label: "Mi asistencia", icon: "▣" },
-  { href: "/enviar-comprobante", label: "Enviar comprobante", icon: "⇧" },
+  { href: "/resumen", label: "Mi resumen", icon: "dashboard" },
+  { href: "/reportes/cuotas", label: "Mis cuotas", icon: "matrix" },
+  { href: "/mi-cuenta", label: "Mi cuenta", icon: "account" },
+  { href: "/mi-asistencia", label: "Mi asistencia", icon: "attendance" },
+  { href: "/enviar-comprobante", label: "Enviar comprobante", icon: "receipt" },
 ] satisfies NavigationLink[];
 
 function visibleLinks(access: AccessContext) {
@@ -46,27 +47,23 @@ function visibleLinks(access: AccessContext) {
 export function AppShell({ access, children }: { access: AccessContext; children: React.ReactNode }) {
   return (
     <div className="app-shell">
-      <header className="topbar">
+      <aside className="sidebar" aria-label="Navegación principal">
         <Link href="/resumen" className="brand" aria-label="Voces de Esperanza, inicio">
-          <span className="brand-mark" aria-hidden="true">♪</span>
+          <span className="brand-mark" aria-hidden="true"><Music2 size={20}/></span>
           <span>
             <span className="brand-title">Voces de Esperanza</span>
             <span className="brand-subtitle">Cuotas, tesorería y asistencia</span>
           </span>
         </Link>
-        <div className="actions">
-          <ThemeToggle />
-          <span className="user-chip"><span aria-hidden="true">●</span><span>{access.name}</span></span>
-          <SignOutButton />
-        </div>
+        <AppNavigation links={[...visibleLinks(access)]} />
+        <p className="sidebar-note">Información privada. Los comprobantes y datos personales solo se muestran según tu rol y cuerda.</p>
+      </aside>
+      <header className="topbar">
+        <Link href="/resumen" className="brand brand-mobile" aria-label="Voces de Esperanza, inicio"><span className="brand-mark" aria-hidden="true"><Music2 size={18}/></span><span className="brand-title">Voces de Esperanza</span></Link>
+        <div className="topbar-context"><span className="context-chip"><Database aria-hidden="true" size={14}/><strong>Excel</strong> pendiente</span></div>
+        <div className="actions"><ThemeToggle/><span className="user-chip"><UserRound aria-hidden="true" size={14}/><span>{access.name}</span></span><SignOutButton/></div>
       </header>
-      <div className="app-grid">
-        <aside className="sidebar" aria-label="Navegación principal">
-          <AppNavigation links={[...visibleLinks(access)]} />
-          <p className="sidebar-note">Información privada. Los comprobantes y datos personales solo se muestran según tu rol y cuerda.</p>
-        </aside>
-        <main><Notice warning="Migración histórica pendiente de aprobación" />{children}</main>
-      </div>
+      <main className="app-content"><Notice warning="Migración histórica pendiente de aprobación" />{children}</main>
     </div>
   );
 }

@@ -17,11 +17,11 @@ async function signIn(page: Page, email: string) {
 
 test("tesorería consulta el dashboard y conserva el período al navegar", async ({ page }) => {
   await signIn(page, USERS.admin);
-  await page.goto("/resumen?period=2026-09");
+  await page.goto("/resumen?period=2026-09&source=operation");
   await expect(page.getByRole("heading", { name: "Resumen del coro" })).toBeVisible();
   await expect(page.getByText("Tendencia de seis meses")).toBeVisible();
   const monthlyLink = page.getByRole("link", { name: "Abrir 2026-09" });
-  await expect(monthlyLink).toHaveAttribute("href", "/reportes/movimientos?period=2026-09");
+  await expect(monthlyLink).toHaveAttribute("href", "/reportes/movimientos?period=2026-09&source=operation");
   await monthlyLink.click();
   await expect(page).toHaveURL(/\/reportes\/movimientos\?period=2026-09/);
   await expect(page.getByText("Pago coral sintético")).toBeVisible();
@@ -29,7 +29,7 @@ test("tesorería consulta el dashboard y conserva el período al navegar", async
 
 test("reporte mensual filtra, exporta y abre un detalle accesible", async ({ page }) => {
   await signIn(page, USERS.admin);
-  await page.goto("/reportes/movimientos?period=2026-09");
+  await page.goto("/reportes/movimientos?period=2026-09&source=operation");
   const paymentRow = page.locator("tbody tr").filter({ hasText: "Pago coral sintético" });
   await expect(paymentRow).toBeVisible();
   await paymentRow.focus();
@@ -57,7 +57,7 @@ test("reporte mensual filtra, exporta y abre un detalle accesible", async ({ pag
 
 test("matriz anual filtra y expone el cargo sin confundir ausencia con pago", async ({ page }) => {
   await signIn(page, USERS.admin);
-  await page.goto("/reportes/cuotas?year=2026&cutoff=2026-09");
+  await page.goto("/reportes/cuotas?year=2026&cutoff=2026-09&source=operation");
   await page.getByLabel("Cuerda").selectOption({ label: "Soprano E2E" });
   await page.getByLabel("Buscar persona").fill("Alba");
   await page.getByRole("button", { name: "Aplicar filtros" }).click();
@@ -95,18 +95,18 @@ test("el servidor aplica alcance de cuerda y alcance individual", async ({ brows
   const headContext = await browser.newContext();
   const headPage = await headContext.newPage();
   await signIn(headPage, USERS.head);
-  await headPage.goto("/reportes/cuotas?year=2026&cutoff=2026-09");
+  await headPage.goto("/reportes/cuotas?year=2026&cutoff=2026-09&source=operation");
   await expect(headPage.getByText("Alba Sintética").first()).toBeVisible();
   await expect(headPage.getByText("Clara Sintética").first()).toBeVisible();
   await expect(headPage.getByText("Bruno Sintético")).not.toBeVisible();
-  await headPage.goto("/reportes/movimientos?period=2026-09");
+  await headPage.goto("/reportes/movimientos?period=2026-09&source=operation");
   await expect(headPage).toHaveURL(/\/sin-acceso/);
   await headContext.close();
 
   const memberContext = await browser.newContext();
   const memberPage = await memberContext.newPage();
   await signIn(memberPage, USERS.member);
-  await memberPage.goto("/reportes/cuotas?year=2026&cutoff=2026-09");
+  await memberPage.goto("/reportes/cuotas?year=2026&cutoff=2026-09&source=operation");
   await expect(memberPage.getByText("Alba Sintética").first()).toBeVisible();
   await expect(memberPage.getByText("Clara Sintética")).not.toBeVisible();
   await expect(memberPage.getByText("Bruno Sintético")).not.toBeVisible();

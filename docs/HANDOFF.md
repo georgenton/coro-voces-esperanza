@@ -11,13 +11,13 @@ Jorge autorizó para este proyecto: commits y push, ramas/PR, merge a `main` con
 - Repositorio: `https://github.com/georgenton/coro-voces-esperanza`.
 - Visibilidad comprobada: pública.
 - Rama predeterminada corregida a `main`.
-- Rama de trabajo: `codex/coro-voces-esperanza`.
+- Rama de trabajo de esta entrega: `codex/interfaz-reportes`.
 - PR 1 integrado con todos los controles verdes; merge `c600b64dc3087a0e448b091da1498aa2889d32c2`.
 - La corrección del healthcheck quedó integrada en `main` como merge `a6d048eb313c98f87cf726963b45b0db0922e056`. GitHub creó el merge pero no marcó el PR 2 como fusionado; el PR se cerró después de verificar los dos padres y el árbol en `main`.
 - El bootstrap seguro del acceso inicial quedó integrado mediante el PR 4 como merge `786d8aafe2636f890ede2cb56d97ef50b9cd483e`; dos workflows completos pasaron antes del merge.
 - `private/`, Excel/CSV, diagnóstico confidencial, entornos, adjuntos, respaldos y artefactos de pruebas/build siguen ignorados por Git y Docker.
 - El trabajo de datos e informes se integró mediante el PR 6 como merge `b0a71f3974e6cf8969e6c7e4244e64d645733263` y se desplegó manualmente en Coolify después de respaldo y preflight.
-- La integración visual se desarrolla por separado en `codex/interfaz-reportes`; no se ha fusionado ni desplegado y requiere aprobación humana.
+- La integración visual y de doble fuente está en la PR 7 sobre `codex/interfaz-reportes`. Jorge aprobó su revisión y publicación el 4 de octubre; el merge y despliegue requieren controles verdes y verificación manual posterior.
 - La corrección operativa se integró en `main` mediante el PR 8 (`0dd450e`); sus cambios versionados son documentación y su configuración afecta solo al recurso del coro.
 
 ## Cambio funcional de la fase de datos integrada
@@ -34,16 +34,18 @@ Archivos centrales:
 
 ## Datos reales
 
-No se promovió, aprobó ni publicó ningún saldo, identidad de miembro, fecha o pago real. El Excel y los extractos en `private/` no entraron a Git, CI, Docker, Notion ni servicios externos. La copia privada local conserva modo de solo lectura y hash verificado. Producción tiene un SUPERADMIN activo, pero mantiene cero miembros, lotes de importación, cargos, partes, aplicaciones y movimientos. La aplicación continúa mostrando “Migración histórica pendiente de aprobación”.
+El 4 de octubre se cargó el Excel autorizado en el staging privado de producción mediante la sesión autenticada existente. El lote conserva SHA-256 `fb50b25e3bb54f9206d150f18a5f1d06b05298df402e518b10a9a596deddd315`, 30 hojas, 833 filas, 4.357 celdas y 21 incidencias. La repetición devolvió el mismo lote y confirmó idempotencia. El original y los extractos en `private/` no entraron a Git, CI, Docker ni documentación nominativa.
+
+No se aprobó ni promovió ningún saldo, identidad de miembro, fecha, cargo, pago o movimiento. Producción conserva un SUPERADMIN y un lote de staging; miembros, cargos, partes, aplicaciones y movimientos derivados del Excel permanecen en cero. “Visible como fuente histórica” no significa “publicado en operación”.
 
 ## Verificación y operación
 
-- 45 pruebas unitarias y 14 de integración PostgreSQL pasaron localmente con Node 24.19.0. La migración nueva se aplicó en PostgreSQL 17; staging sintético comprobó persistencia exacta de hoja/fila/celda e idempotencia; los reportes comprobaron apertura/entradas/salidas/cierre y alcance de jefe de cuerda.
+- 49 pruebas unitarias y 14 de integración PostgreSQL pasaron localmente con Node 24.19.0. La integración se repitió en una base aislada limpia; staging sintético comprobó persistencia exacta de hoja/fila/celda e idempotencia, y los reportes comprobaron separación de fuente, apertura/entradas/salidas/cierre y alcance por rol.
 - La fuente real se leyó sin persistirla en la base de pruebas: 30 hojas, 833 filas, 4.357 celdas, 22 meses y octubre parcial. El detalle no nominativo está en `docs/INFORME-IMPORTACION.md`.
-- Build productivo, 37 reglas de referencia y 6 E2E pasaron antes del PR 6. Coolify desplegó manualmente el merge, aplicó la cuarta migración y terminó `Success` en 4m01s.
+- Build productivo, 37 reglas de referencia, 14 E2E y una prueba visual explícita pasaron en esta entrega. La imagen final local aplicó cuatro migraciones sin pendientes, arrancó como `nextjs` y devolvió health 200.
 - La imagen del commit funcional es `voces-esperanza:e006564`, digest local `sha256:8b108e710da7c8293fa7b7e267e206deffffba9033fdfc3a9cf30ddabe925684`.
 - Persistencia y restauración pasaron con datos y adjunto sintéticos en recursos separados; ver `docs/DEPLOY-COOLIFY.md`.
-- Producción: `https://coro.syntavera.dev`, rama `main`, commit funcional `b0a71f3`, despliegue Coolify `Success` y health externo 200 con `{"status":"healthy"}`, `no-store` y `noindex`. La interfaz de la PR 7 no forma parte de producción.
+- Producción: `https://coro.syntavera.dev`. El dominio correcto permanece bajo `SyntaVera.dev`; no se modifica DNS. El commit, imagen y resultado del despliegue final de la PR 7 se completan en este documento después de la promoción manual.
 - Coolify: proyecto `curszcfgrj5qgqoalyjpjfx1`, entorno `hqjrkmlxe1xybokuktovevmb`, app `qwag6glb0gc6jfzlfwa46fi4`, PostgreSQL `cw9lgsmko0t2rnramfsrqmrm`.
 - DNS: se usó el registro ya existente de `coro.syntavera.dev`; no se modificó Cloudflare ni se tocó `cintavera.dev`.
 - Respaldo `qpat2ip0sang71p3yfh0muwz`: diario a las 03:00, copia local + R2, retención de 14 copias/14 días y detector después de 26 horas. El respaldo posterior a la rotación terminó `Success` con 109.44 KB. No hay canal saliente global habilitado para entregar la alerta.
@@ -52,8 +54,8 @@ No se promovió, aprobó ni publicó ningún saldo, identidad de miembro, fecha 
 - Coolify quedó en despliegue manual controlado, sin previews y sin inyección automática de variables runtime como argumentos de build. Cuatro secretos del coro se rotaron y una sesión se revocó; ver `docs/SEGURIDAD-OPERATIVA.md`.
 - El acceso inicial ya está activo. No volver a ejecutar bootstrap salvo recuperación autorizada; no publicar identidad, contraseña, token ni enlace privado en documentación, GitHub, Notion o chat.
 
-## Integración visual pendiente de aprobación
+## Integración visual aprobada
 
 Los artefactos de diseño recibidos el 3 de octubre sí se revisaron y su lenguaje visual se trasladó a componentes Next.js reales. La rama `codex/interfaz-reportes` contiene dashboard, reporte mensual y matriz anual conectados a servicios reales, tema claro/oscuro, panel accesible y E2E autenticado por rol. Los ZIP/HTML de demostración no entraron al runtime.
 
-La interfaz de Claude está implementada en la PR 7 y tiene CI aprobado, pero Jorge aún no ha dado aprobación visual. Mantenerla abierta, sin merge y sin despliegue. La revisión local usa datos sintéticos y autenticación; no usa credenciales personales ni promueve el Excel. Coolify quedó en despliegue manual y los secretos se retiraron del build y se rotaron antes de esta revisión.
+La interfaz de Claude está implementada en la PR 7 y Jorge dio aprobación visual y de publicación. La revisión local usa datos sintéticos y autenticación; el Excel real solo vive en staging privado, separado de operación. Coolify permanece en despliegue manual y los secretos siguen fuera del build.
