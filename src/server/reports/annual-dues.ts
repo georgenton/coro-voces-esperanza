@@ -16,9 +16,10 @@ export function annualDuesCellStatus(input: {
   dueCents: number;
   appliedCents: number;
   pendingCents: number;
+  conceptSystemKey?: string;
 }): AnnualDuesCellStatus {
   if (input.period > input.cutoffPeriod) return input.appliedCents > 0 ? "ADVANCE" : "FUTURE";
-  if (input.period.endsWith("-01") && input.chargeCount === 0) return "NOT_DUE";
+  if ((input.conceptSystemKey ?? "MONTHLY_DUES") === "MONTHLY_DUES" && input.period.endsWith("-01") && input.chargeCount === 0) return "NOT_DUE";
   if (input.memberStatus === MemberStatus.REVIEW_REQUIRED) return "REVIEW";
   if (input.chargeCount === 0) return "NOT_IMPORTED";
   if (input.pendingCents === 0) return "PAID";
@@ -30,6 +31,7 @@ export async function getAnnualDuesReport(input: {
   access: AccessContext;
   year: number;
   cutoffPeriod: string;
+  conceptId?: string;
   sectionId?: string;
   memberStatus?: string;
   query?: string;
@@ -44,6 +46,15 @@ export async function getAnnualDuesReport(input: {
   const status = Object.values(MemberStatus).includes(input.memberStatus as MemberStatus) ? input.memberStatus as MemberStatus : undefined;
   const query = input.query?.trim().slice(0, 100) || undefined;
   const page = Number.isSafeInteger(input.page) && input.page && input.page > 0 ? Math.min(input.page, 10_000) : 1;
+  const concepts = await prisma.billingConcept.findMany({
+    where: { active: true, systemKey: { not: "OPENING_DEBT" } },
+    orderBy: [{ name: "asc" }],
+    select: { id: true, name: true, systemKey: true },
+  });
+  const selectedConcept = concepts.find(({ id }) => id === input.conceptId)
+    ?? concepts.find(({ systemKey }) => systemKey === "MONTHLY_DUES")
+    ?? concepts[0];
+  if (!selectedConcept) throw new Error("No hay conceptos de cobro activos para construir la matriz.");
   const scope: Prisma.MemberWhereInput = global
     ? {}
     : input.access.roles.includes(AppRole.JEFE_DE_CUERDA)
@@ -69,14 +80,14 @@ export async function getAnnualDuesReport(input: {
         charges: {
           where: {
             status: { not: ChargeStatus.VOIDED },
-            concept: { systemKey: { in: ["MONTHLY_DUES", "OPENING_DEBT"] } },
+            conceptId: { in: [selectedConcept.id] },
             period: { lte: `${input.year}-12` },
           },
           include: { concept: true, allocations: true, adjustments: true },
         },
         paymentParts: {
           where: { OR: [{ movement: { status: "CONFIRMED" } }, { isLegacy: true, cashEffect: false }] },
-          include: { allocations: { select: { amountCents: true, charge: { select: { period: true } } } } },
+          include: { allocations: { select: { amountCents: true, charge: { select: { period: true, conceptId: true } } } } },
         },
       },
       orderBy: [{ currentSection: { sortOrder: "asc" } }, { displayName: "asc" }],
@@ -85,15 +96,15 @@ export async function getAnnualDuesReport(input: {
   ]);
 
   const rows = members.map((member) => {
-    const monthlyCharges = member.charges.filter((charge) => charge.concept.systemKey === "MONTHLY_DUES" && charge.period.startsWith(`${input.year}-`));
-    const priorCharges = member.charges.filter((charge) => charge.concept.systemKey === "OPENING_DEBT" || charge.period < `${input.year}-01`);
+    const monthlyCharges = member.charges.filter((charge) => charge.conceptId === selectedConcept.id && charge.period.startsWith(`${input.year}-`));
+    const priorCharges = member.charges.filter((charge) => charge.conceptId === selectedConcept.id && charge.period < `${input.year}-01`);
     const priorDebtCents = priorCharges.reduce((sum, charge) => sum + chargeAmounts(charge).pendingCents, 0);
     const creditCents = member.paymentParts.reduce((sum, part) => {
       const applied = part.allocations.reduce((value, allocation) => value + allocation.amountCents, 0);
       return sum + Math.max(0, part.amountCents - applied);
     }, 0);
     const advanceCents = member.paymentParts.reduce((sum, part) => sum + part.allocations
-      .filter(({ charge }) => charge.period > input.cutoffPeriod)
+      .filter(({ charge }) => charge.conceptId === selectedConcept.id && charge.period > input.cutoffPeriod)
       .reduce((value, allocation) => value + allocation.amountCents, 0), 0);
     const months = MONTHS.map((month) => {
       const period = `${input.year}-${month}`;
@@ -110,9 +121,23 @@ export async function getAnnualDuesReport(input: {
         cutoffPeriod: input.cutoffPeriod,
         memberStatus: member.status,
         chargeCount: charges.length,
+        conceptSystemKey: selectedConcept.systemKey,
         ...amounts,
       });
-      return { period, ...amounts, status: cellStatus };
+      return {
+        period,
+        ...amounts,
+        status: cellStatus,
+        charges: charges.map((charge) => ({
+          id: charge.id,
+          amountCents: charge.amountCents,
+          dueOn: charge.dueOn?.toISOString() ?? null,
+          source: charge.source,
+          sourceReference: charge.sourceReference,
+          adjustmentsCents: charge.adjustments.reduce((sum, adjustment) => sum + adjustment.amountCents, 0),
+          allocationsCents: charge.allocations.reduce((sum, allocation) => sum + allocation.amountCents, 0),
+        })),
+      };
     });
     const dueAtCutoffCents = months.filter(({ period }) => period <= input.cutoffPeriod).reduce((sum, month) => sum + month.dueCents, 0);
     const appliedAtCutoffCents = months.filter(({ period }) => period <= input.cutoffPeriod).reduce((sum, month) => sum + month.appliedCents, 0);
@@ -146,7 +171,9 @@ export async function getAnnualDuesReport(input: {
   return {
     year: input.year,
     cutoffPeriod: input.cutoffPeriod,
-    filters: { sectionId: allowedSection, memberStatus: status, query },
+    filters: { conceptId: selectedConcept.id, sectionId: allowedSection, memberStatus: status, query },
+    concepts,
+    selectedConcept,
     sections: global ? sections : sections.filter(({ id }) => input.access.sectionIds.includes(id)),
     rows: visibleRows,
     totals,

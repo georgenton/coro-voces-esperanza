@@ -13,6 +13,8 @@ La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y 
 - Estado agregado comprobado mediante el respaldo posterior a la rotación: 1 usuario administrador y 0 sesiones, miembros, filas importadas, cargos, partes de pago, aplicaciones, movimientos y adjuntos. Los catálogos base permanecen separados.
 - La imagen final incluye `curl` para el healthcheck interno de Coolify. El primer intento sin esa dependencia falló de forma segura y Coolify retiró el contenedor no saludable; el segundo quedó `healthy`.
 - El PR 4 añadió el bootstrap interactivo del SUPERADMIN. Coolify desplegó el merge `786d8aa` en 3m48s con estado `Success`; después `/api/health` respondió 200 por HTTPS con `no-store` y `noindex`. El SUPERADMIN ya fue activado en el flujo privado.
+- Antes del PR 6 se ejecutó un respaldo manual (`Success`, 102.73 KB) y se comprobó que las tablas operativas seguían vacías. El despliegue manual `iyizordbdpqfd9aaqfmq5qvy` publicó `b0a71f3` en 4m01s con estado `Success`; `/api/health` respondió 200 y `{"status":"healthy"}`.
+- El merge 6 no produjo un despliegue y GitHub no mostró un webhook del repositorio. Se corrigió la expectativa a `Manual deployments only`; los despliegues requieren verificación y disparo manual.
 
 ## 1. Recursos
 
