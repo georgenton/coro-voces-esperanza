@@ -17,7 +17,7 @@ Jorge autorizó para este proyecto: commits y push, ramas/PR, merge a `main` con
 - El bootstrap seguro del acceso inicial quedó integrado mediante el PR 4 como merge `786d8aafe2636f890ede2cb56d97ef50b9cd483e`; dos workflows completos pasaron antes del merge.
 - `private/`, Excel/CSV, diagnóstico confidencial, entornos, adjuntos, respaldos y artefactos de pruebas/build siguen ignorados por Git y Docker.
 - El trabajo de datos e informes se integró mediante el PR 6 como merge `b0a71f3974e6cf8969e6c7e4244e64d645733263` y se desplegó manualmente en Coolify después de respaldo y preflight.
-- La integración visual y de doble fuente está en la PR 7 sobre `codex/interfaz-reportes`. Jorge aprobó su revisión y publicación el 4 de octubre; el merge y despliegue requieren controles verdes y verificación manual posterior.
+- La integración visual y de doble fuente se integró mediante la PR 7 como merge `3b8b5c3eecc66a517a4176545c49666c2be71166`, después de que el job `app` de GitHub Actions terminara verde. La rama de trabajo sigue siendo `codex/interfaz-reportes`.
 - La corrección operativa se integró en `main` mediante el PR 8 (`0dd450e`); sus cambios versionados son documentación y su configuración afecta solo al recurso del coro.
 
 ## Cambio funcional de la fase de datos integrada
@@ -40,17 +40,17 @@ No se aprobó ni promovió ningún saldo, identidad de miembro, fecha, cargo, pa
 
 ## Verificación y operación
 
-- 49 pruebas unitarias y 14 de integración PostgreSQL pasaron localmente con Node 24.19.0. La integración se repitió en una base aislada limpia; staging sintético comprobó persistencia exacta de hoja/fila/celda e idempotencia, y los reportes comprobaron separación de fuente, apertura/entradas/salidas/cierre y alcance por rol.
+- 49 pruebas unitarias y 14 de integración PostgreSQL pasaron localmente con Node 24. La integración se repitió en una base aislada limpia; staging sintético comprobó persistencia exacta de hoja/fila/celda e idempotencia, y los reportes comprobaron separación de fuente, apertura/entradas/salidas/cierre y alcance por rol.
 - La fuente real se leyó sin persistirla en la base de pruebas: 30 hojas, 833 filas, 4.357 celdas, 22 meses y octubre parcial. El detalle no nominativo está en `docs/INFORME-IMPORTACION.md`.
 - Build productivo, 37 reglas de referencia, 14 E2E y una prueba visual explícita pasaron en esta entrega. La imagen final local aplicó cuatro migraciones sin pendientes, arrancó como `nextjs` y devolvió health 200.
-- La imagen del commit funcional es `voces-esperanza:e006564`, digest local `sha256:8b108e710da7c8293fa7b7e267e206deffffba9033fdfc3a9cf30ddabe925684`.
+- La imagen local final de la revisión es `voces-esperanza:codex-pr7-final`. Coolify construyó y publicó `qwag6glb0gc6jfzlfwa46fi4:3b8b5c3eecc66a517a4176545c49666c2be71166` con Node 24.21.0.
 - Persistencia y restauración pasaron con datos y adjunto sintéticos en recursos separados; ver `docs/DEPLOY-COOLIFY.md`.
-- Producción: `https://coro.syntavera.dev`. El dominio correcto permanece bajo `SyntaVera.dev`; no se modifica DNS. El commit, imagen y resultado del despliegue final de la PR 7 se completan en este documento después de la promoción manual.
+- Producción: `https://coro.syntavera.dev`. El dominio correcto permanece bajo `SyntaVera.dev`; no se modificó DNS. El despliegue manual `ddzlruoxcbggvfx8fiqnvnly` publicó el merge `3b8b5c3` en 4m04s con estado `Success`; el health HTTPS posterior respondió 200, `{"status":"healthy"}`, `no-store`, `noindex` y las cabeceras de seguridad esperadas.
 - Coolify: proyecto `curszcfgrj5qgqoalyjpjfx1`, entorno `hqjrkmlxe1xybokuktovevmb`, app `qwag6glb0gc6jfzlfwa46fi4`, PostgreSQL `cw9lgsmko0t2rnramfsrqmrm`.
 - DNS: se usó el registro ya existente de `coro.syntavera.dev`; no se modificó Cloudflare ni se tocó `cintavera.dev`.
-- Respaldo `qpat2ip0sang71p3yfh0muwz`: diario a las 03:00, copia local + R2, retención de 14 copias/14 días y detector después de 26 horas. El respaldo posterior a la rotación terminó `Success` con 109.44 KB. No hay canal saliente global habilitado para entregar la alerta.
-- `/data/uploads`: respaldo diario a las 03:05, corte consistente, copia local + R2 y retención de 14 copias/14 días. El volumen productivo está vacío; la primera copia fue de 137 B.
-- Se restauró el dump posterior a la rotación en PostgreSQL 17 temporal, sin red y en memoria. La descarga figuraba disponible local y S3; sigue pendiente forzar la recuperación exclusivamente desde R2.
+- Respaldo `qpat2ip0sang71p3yfh0muwz`: diario a las 03:00, copia local + R2, retención de 14 copias/14 días y detector después de 26 horas. Antes de la carga se creó `pg-dump-voces_esperanza-1791152124.dmp` (109.67 KB); después de la carga, `pg-dump-voces_esperanza-1791154988.dmp` (381.91 KB). Ambos terminaron `Success` y figuran disponibles local + S3. No hay canal saliente global habilitado para entregar la alerta.
+- `/data/uploads`: respaldo diario a las 03:05, corte consistente, copia local + R2 y retención de 14 copias/14 días. Antes de la carga se creó `volume-qwag6glb0gc6jfzlfwa46fi4-voces-uploads-1791152253.tar.gz` (136 B); después de conservar el XLSX en staging privado, `volume-qwag6glb0gc6jfzlfwa46fi4-voces-uploads-1791154932.tar.gz` (98.6 KB). Ambos terminaron `Success` y figuran disponibles local + S3.
+- Se restauró el dump posterior a la rotación en PostgreSQL 17 temporal, sin red y en memoria. La descarga figuraba disponible local y S3. Coolify 4.3.23 no ofrece selector de origen cuando ambas copias existen; sigue pendiente una recuperación demostrablemente exclusiva desde R2. No se borró ni movió la copia local, no se alteró retención y no se expusieron credenciales compartidas para forzarla.
 - Coolify quedó en despliegue manual controlado, sin previews y sin inyección automática de variables runtime como argumentos de build. Cuatro secretos del coro se rotaron y una sesión se revocó; ver `docs/SEGURIDAD-OPERATIVA.md`.
 - El acceso inicial ya está activo. No volver a ejecutar bootstrap salvo recuperación autorizada; no publicar identidad, contraseña, token ni enlace privado en documentación, GitHub, Notion o chat.
 
@@ -58,4 +58,4 @@ No se aprobó ni promovió ningún saldo, identidad de miembro, fecha, cargo, pa
 
 Los artefactos de diseño recibidos el 3 de octubre sí se revisaron y su lenguaje visual se trasladó a componentes Next.js reales. La rama `codex/interfaz-reportes` contiene dashboard, reporte mensual y matriz anual conectados a servicios reales, tema claro/oscuro, panel accesible y E2E autenticado por rol. Los ZIP/HTML de demostración no entraron al runtime.
 
-La interfaz de Claude está implementada en la PR 7 y Jorge dio aprobación visual y de publicación. La revisión local usa datos sintéticos y autenticación; el Excel real solo vive en staging privado, separado de operación. Coolify permanece en despliegue manual y los secretos siguen fuera del build.
+La interfaz de Claude quedó integrada en `main` y desplegada desde el merge `3b8b5c3`; Jorge dio aprobación visual y de publicación. La revisión local usa datos sintéticos y autenticación. En producción, el Excel real solo vive en staging privado y se muestra como fuente histórica: el dashboard operativo continúa sin miembros, cargos, partes, aplicaciones ni movimientos derivados del archivo. Coolify permanece en despliegue manual y los secretos siguen fuera del build.

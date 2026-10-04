@@ -1,19 +1,20 @@
 # Despliegue en Coolify
 
-La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare. `main` contiene los datos e informes aprobados en el PR 6; la interfaz de la PR 7 sigue abierta, sin desplegar.
+La aplicación se publicó el 1 de octubre de 2026 como una instancia Next.js y una base PostgreSQL separada. URL canónica: `https://coro.syntavera.dev`. El registro DNS ya existente apuntaba al servidor de Coolify, por lo que no se modificó Cloudflare. El 4 de octubre se integró y desplegó la interfaz de doble fuente de la PR 7 desde `main`.
 
 ## Estado de producción verificado
 
 - Proyecto Coolify: `Voces de Esperanza` (`curszcfgrj5qgqoalyjpjfx1`), entorno `production` (`hqjrkmlxe1xybokuktovevmb`).
-- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, commit funcional desplegado `b0a71f3974e6cf8969e6c7e4244e64d645733263`.
+- Aplicación: `voces-esperanza-app` (`qwag6glb0gc6jfzlfwa46fi4`), rama `main`, merge desplegado `3b8b5c3eecc66a517a4176545c49666c2be71166`.
 - PostgreSQL 17 privado: `voces-postgres` (`cw9lgsmko0t2rnramfsrqmrm`), base `voces_esperanza`, sin puerto público.
 - Volumen de adjuntos: `qwag6glb0gc6jfzlfwa46fi4-voces-uploads` en `/data/uploads`.
 - HTTPS externo: `/api/health` respondió 200 con `{"status":"healthy"}`, `Cache-Control: no-store` y `X-Robots-Tag: noindex, nofollow`.
 - Migraciones en producción: 4 aplicadas y al día para el commit desplegado.
-- Estado agregado comprobado mediante el respaldo posterior a la rotación: 1 usuario administrador y 0 sesiones, miembros, filas importadas, cargos, partes de pago, aplicaciones, movimientos y adjuntos. Los catálogos base permanecen separados.
+- Producción conserva 1 usuario administrador y un lote XLSX en staging privado: 30 hojas, 833 filas, 4.357 celdas y 21 incidencias. La fuente histórica es visible con procedencia, pero la fuente operación continúa sin miembros, cargos, partes de pago, aplicaciones ni movimientos derivados del Excel.
 - La imagen final incluye `curl` para el healthcheck interno de Coolify. El primer intento sin esa dependencia falló de forma segura y Coolify retiró el contenedor no saludable; el segundo quedó `healthy`.
 - El PR 4 añadió el bootstrap interactivo del SUPERADMIN. Coolify desplegó el merge `786d8aa` en 3m48s con estado `Success`; después `/api/health` respondió 200 por HTTPS con `no-store` y `noindex`. El SUPERADMIN ya fue activado en el flujo privado.
 - Antes del PR 6 se ejecutó un respaldo manual (`Success`, 102.73 KB) y se comprobó que las tablas operativas seguían vacías. El despliegue manual `iyizordbdpqfd9aaqfmq5qvy` publicó `b0a71f3` en 4m01s con estado `Success`; `/api/health` respondió 200 y `{"status":"healthy"}`.
+- La PR 7 pasó el job `app` de GitHub Actions en 4m26s y se integró como `3b8b5c3`. El despliegue manual `ddzlruoxcbggvfx8fiqnvnly` terminó `Success` en 4m04s y publicó la imagen `qwag6glb0gc6jfzlfwa46fi4:3b8b5c3eecc66a517a4176545c49666c2be71166`; el health HTTPS posterior respondió 200, `{"status":"healthy"}`, `no-store` y `noindex`.
 - El merge 6 no produjo un despliegue y GitHub no mostró un webhook del repositorio. Se corrigió la expectativa a `Manual deployments only`; los despliegues requieren verificación y disparo manual.
 
 ## 1. Recursos
@@ -92,7 +93,9 @@ Restaurar primero en un PostgreSQL separado, montar una copia del volumen y comp
 
 En Coolify quedó habilitado el respaldo de `voces_esperanza` a las 03:00 `America/Guayaquil`, con copia local y en `SyntaVera R2 Backups`, retención de 14 copias/14 días en ambos destinos y detector de ausencia después de 26 horas. Después de rotar la credencial del motor, una ejecución manual terminó `Success`, tamaño 109.44 KB y disponibilidad local + S3. Los canales salientes globales están deshabilitados, así que el detector todavía no produce una notificación comprobada.
 
-El volumen `/data/uploads` se respalda a las 03:05, deteniendo el contenedor durante el archivo para obtener un corte consistente. Conserva 14 copias/14 días localmente y en el mismo destino S3. La primera ejecución terminó `Success`, tamaño 137 B, lo que concuerda con cero adjuntos productivos.
+El volumen `/data/uploads` se respalda a las 03:05, deteniendo el contenedor durante el archivo para obtener un corte consistente. Conserva 14 copias/14 días localmente y en el mismo destino S3. Antes de la carga real, la copia `volume-qwag6glb0gc6jfzlfwa46fi4-voces-uploads-1791152253.tar.gz` terminó `Success` con 136 B. Después de conservar el XLSX en staging privado, `volume-qwag6glb0gc6jfzlfwa46fi4-voces-uploads-1791154932.tar.gz` terminó `Success` con 98.6 KB; ambas figuran local + S3.
+
+La base también se respaldó inmediatamente antes y después de la carga. `pg-dump-voces_esperanza-1791152124.dmp` (109.67 KB) y `pg-dump-voces_esperanza-1791154988.dmp` (381.91 KB) terminaron `Success` y figuran local + S3.
 
 El destino R2 es compartido por otros recursos de SyntaVera y separa al coro por ruta, no mediante un bucket/principal dedicado. Cambiar el alcance de credenciales o activar notificaciones requiere una decisión sobre configuración global compartida y no se realizó en esta intervención.
 
@@ -109,7 +112,9 @@ El 1 de octubre de 2026 se probó la imagen local del commit `e0065642b3fff6c77e
 
 El respaldo del simulacro permanece en el mismo equipo; prueba el procedimiento, no resiliencia ante pérdida completa del servidor. En producción debe copiarse a almacenamiento externo aprobado y probarse periódicamente en recursos separados.
 
-El 4 de octubre se descargó el dump real posterior a la rotación y se restauró con PostgreSQL 17 en un contenedor temporal, sin red y con almacenamiento en memoria. `pg_restore --exit-on-error` terminó correctamente y se comprobaron 42 tablas y conteos agregados coherentes con el estado vacío de datos operativos. El mismo registro de Coolify figura `Local Available` y `S3 Available`; como el botón no informa cuál origen atendió la descarga, todavía falta repetir el simulacro forzando la lectura desde R2 después de una pérdida simulada de la copia local.
+El 4 de octubre se descargó el dump real posterior a la rotación y se restauró con PostgreSQL 17 en un contenedor temporal, sin red y con almacenamiento en memoria. `pg_restore --exit-on-error` terminó correctamente y se comprobaron 42 tablas y conteos agregados coherentes con el estado vacío de datos operativos de ese corte. El mismo registro de Coolify figura `Local Available` y `S3 Available`.
+
+Coolify 4.3.23 no ofrece un selector de origen para descargar o restaurar cuando las copias local y S3 existen a la vez. Por eso todavía no se ha demostrado una recuperación exclusivamente desde R2. No se borró ni movió la copia local, no se cambió la retención y no se usaron ni expusieron las credenciales del bucket compartido para simular la pérdida: cualquiera de esas acciones amplía el riesgo o el alcance y necesita una decisión específica.
 
 ## 8. Despliegue manual controlado
 
@@ -123,4 +128,4 @@ Procedimiento:
 4. verificar commit, estado `Success`, health interno, health HTTPS y consulta real a PostgreSQL;
 5. conservar logs y usar el rollback automático de rolling update si el contenedor nuevo no queda saludable.
 
-No desplegar previews ni la PR 7 hasta aprobación visual explícita. Un despliegue aceptado por Coolify no sustituye estas comprobaciones.
+No desplegar previews. Los despliegues posteriores deben repetir este procedimiento; un estado `Success` de Coolify no sustituye las comprobaciones externas ni autoriza promover staging a operación.

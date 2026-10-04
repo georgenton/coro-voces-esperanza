@@ -67,6 +67,7 @@ Este entorno no contiene datos productivos, no desactiva autenticación y no usa
 - El setup E2E se niega a limpiar una base que no sea local, desechable y ejecutada con `NODE_ENV=test`.
 - Las pruebas visuales usaron solo fixtures sintéticos. El Excel real se cargó aparte en el staging privado de producción y no se aprobó ni promovió.
 - Jorge aprobó expresamente la revisión visual, el merge de la PR 7, el despliegue manual y la publicación de la fuente histórica el 4 de octubre. La autorización no convierte staging en contabilidad aprobada.
+- La PR 7 pasó GitHub Actions, se integró como merge `3b8b5c3eecc66a517a4176545c49666c2be71166` y el despliegue manual correspondiente terminó `Success`. Se verificaron en producción el selector de fuente, octubre parcial, procedencia histórica, la matriz literal y la fuente operación sin datos derivados del Excel.
 
 ## Brechas operativas fuera de la interfaz
 
