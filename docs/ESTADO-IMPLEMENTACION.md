@@ -1,6 +1,6 @@
 # Estado de implementación
 
-Fecha de corte: 3 de octubre de 2026.
+Fecha de corte: 4 de octubre de 2026.
 
 ## Implementado
 
@@ -40,9 +40,10 @@ Fecha de corte: 3 de octubre de 2026.
 - Construcción de imagen Docker y arranque real: migraciones sin pendientes y `/api/health` saludable.
 - Simulacro aislado de persistencia y restauración: reinicio y recreación conservaron PostgreSQL y el adjunto; dump/volumen se restauraron en recursos nuevos con los mismos conteos, hash, propietario/modo y descarga autenticada sin caché compartida.
 - GitHub Actions pasó dos veces sobre el cambio funcional y dos veces sobre la corrección del healthcheck: lint, tipos, unitarias, referencia, migraciones, integración, build, E2E y construcción Docker.
-- Producción en `https://coro.syntavera.dev`: HTTPS y página de acceso 200, health externo 200, health interno de Coolify `healthy`, PostgreSQL privado y volumen persistente.
-- Producción, verificada antes de desplegar esta rama, conserva 0 miembros, lotes, filas, publicaciones, cargos, partes, aplicaciones y movimientos. Existe 1 usuario administrador activo, 1 sesión y 1 registro de auditoría, además de los catálogos iniciales.
-- Respaldo PostgreSQL programado diariamente y primera ejecución manual exitosa; la retención es local al host.
+- Producción en `https://coro.syntavera.dev`: rama `main`, commit funcional `b0a71f3`; la PR 7 continúa abierta, sin fusionar ni desplegar.
+- Los cuatro secretos que aparecieron como argumentos de un build anterior se excluyeron del build, se rotaron y se comprobaron como runtime-only. Una sesión del coro se revocó; no se cambiaron usuarios ni contraseñas personales. Ver `docs/SEGURIDAD-OPERATIVA.md`.
+- El respaldo real posterior a la rotación terminó `Success` con disponibilidad local + S3 y se restauró con PostgreSQL 17 en un recurso temporal sin red. La copia independiente forzada desde R2 sigue pendiente porque Coolify no expone cuál origen usa su descarga cuando ambos están disponibles.
+- La restauración confirmó 42 tablas, 1 usuario y cero sesiones, miembros, filas importadas, cargos, partes, aplicaciones, movimientos y adjuntos. No se promovió el Excel.
 
 ## Pendiente de evidencia o decisión humana
 
@@ -50,9 +51,9 @@ Fecha de corte: 3 de octubre de 2026.
 - La transformación definitiva ya está implementada, pero ningún dato real fue aprobado ni promovido. Revertir una importación ya usada por operaciones posteriores sigue requiriendo ajustes/reversos auditados, no borrado.
 - No se probaron comprobantes bancarios reales ni el proveedor de visión; sin clave, el flujo manual permanece funcional.
 - El SUPERADMIN inicial ya está activo y se mantiene fuera del repositorio. No se expusieron identidad, contraseña, sesión ni secretos durante esta revisión.
-- No se encontró un export de Claude Design aprobado en el paquete recibido; por eso la integración visual de la fase B no se inventó ni se desplegó.
-- Falta configurar almacenamiento externo para copias y ejecutar un simulacro de restauración usando un respaldo real de producción en un host separado.
+- La interfaz de Claude ya está integrada en la PR 7 y conserva su revisión visual pendiente. No está fusionada ni desplegada.
+- PostgreSQL y `/data/uploads` ya tienen copia externa en R2. Falta probar una descarga forzada desde R2 sin copia local y, cuando existan adjuntos reales, repetir su restauración; el volumen actual está vacío.
 - La matriz C01–C50 está documentada. Persisten coberturas parciales que requieren E2E autenticado por rol, comprobantes reales aprobados y validación operativa; ver `docs/MATRIZ-C01-C50.md`.
 - El estado de despliegue, URL, commit e imagen se registra en `docs/DEPLOY-COOLIFY.md`; la migración histórica real continúa bloqueada hasta aprobación humana.
 
-No se afirma conciliación bancaria, saldos aprobados, respaldo externo probado ni aceptación operativa completa.
+No se afirma conciliación bancaria, saldos aprobados, recuperación total ante pérdida del host ni aceptación operativa completa.
