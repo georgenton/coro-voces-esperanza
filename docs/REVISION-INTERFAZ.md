@@ -1,6 +1,6 @@
 # Revisión e integración de interfaz
 
-Fecha: 3 de octubre de 2026, `America/Guayaquil`.
+Fecha: 4 de octubre de 2026, `America/Guayaquil`.
 
 ## Fuente y alcance
 
@@ -41,6 +41,26 @@ Para regenerarlas:
 UPDATE_UI_SCREENSHOTS=true pnpm exec playwright test tests/e2e/visual-evidence.spec.ts --project=chromium-desktop
 ```
 
+La revisión del 4 de octubre no cambió código de interfaz; por eso se conservaron las 18 capturas y no se ejecutó el generador con `UPDATE_UI_SCREENSHOTS=true`. Se volvió a levantar la rama con Node 24, PostgreSQL local desechable, autenticación y fixtures sintéticos. Los cuatro E2E autenticados de escritorio pasaron; el navegador comprobó además 390×844, tema oscuro, cambio de cuerda/mes, apertura de celda, ausencia de desborde y cero errores de consola.
+
+## Entorno local para revisión humana
+
+Mientras el servidor de desarrollo esté activo:
+
+- acceso: `http://127.0.0.1:3000/ingresar`;
+- identidad sintética de tesorería: `tesoreria.e2e@example.test`;
+- contraseña sintética: la constante `E2E_PASSWORD` de `tests/e2e/global-setup.ts`;
+- rutas: `/resumen?period=2026-09`, `/reportes/movimientos?period=2026-09` y `/reportes/cuotas?year=2026&cutoff=2026-09`.
+
+Recorrido breve:
+
+1. En Resumen, cambiar el período de corte y abrir el reporte mensual conservando el mes.
+2. En Reporte mensual, elegir `Cuenta E2E`, filtrar por tipo o texto, abrir una fila con `Enter`, cerrar con `Escape` y exportar CSV.
+3. En Matriz anual, elegir `Soprano E2E`, buscar `Alba`, aplicar filtros y abrir la celda de septiembre con `Enter`.
+4. A 390 px, usar `Siguiente →` y `← Anterior` para cambiar el mes visible; alternar tema hasta oscuro y recorrer controles con teclado.
+
+Este entorno no contiene datos productivos, no desactiva autenticación y no usa credenciales personales de Jorge.
+
 ## Aislamiento y aprobación
 
 - Fixtures: correos `example.test`, nombres marcados como sintéticos y base local cuyo nombre contiene `test`/`e2e`.
@@ -50,6 +70,7 @@ UPDATE_UI_SCREENSHOTS=true pnpm exec playwright test tests/e2e/visual-evidence.s
 
 ## Brechas operativas fuera de la interfaz
 
-- El respaldo productivo sigue en el mismo host; falta copia externa.
-- La configuración indica despliegue por push, pero no existe un webhook de GitHub verificable; el despliegue de la PR 6 tuvo que iniciarse manualmente.
-- La salida de construcción de Coolify puede exponer variables como argumentos de build. Se deben retirar secretos runtime del alcance de build y rotar los secretos potencialmente expuestos antes del piloto. Este documento no incluye sus valores.
+- PostgreSQL y `/data/uploads` ya tienen copia local + R2 y retención de 14 copias/14 días. Falta forzar una recuperación exclusivamente desde R2; la descarga restaurada figuraba disponible en ambos orígenes.
+- El bucket R2 y sus credenciales son compartidos por otros recursos de SyntaVera, aunque los objetos están separados por ruta. Un bucket/principal exclusivo del coro requiere una decisión global autorizada.
+- Coolify quedó en despliegue manual controlado. La inyección automática de argumentos está deshabilitada; los cuatro secretos afectados se rotaron y una sesión se revocó. Ver `docs/SEGURIDAD-OPERATIVA.md`.
+- Los canales salientes globales de notificación están deshabilitados. Los fallos se registran en Coolify, pero no existe un aviso externo comprobado.
