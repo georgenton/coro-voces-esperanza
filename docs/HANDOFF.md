@@ -1,6 +1,6 @@
 # Handoff vigente
 
-Fecha: 3 de octubre de 2026, `America/Guayaquil`.
+Fecha: 4 de octubre de 2026, `America/Guayaquil`.
 
 ## Autorización recibida
 
@@ -16,7 +16,8 @@ Jorge autorizó para este proyecto: commits y push, ramas/PR, merge a `main` con
 - La corrección del healthcheck quedó integrada en `main` como merge `a6d048eb313c98f87cf726963b45b0db0922e056`. GitHub creó el merge pero no marcó el PR 2 como fusionado; el PR se cerró después de verificar los dos padres y el árbol en `main`.
 - El bootstrap seguro del acceso inicial quedó integrado mediante el PR 4 como merge `786d8aafe2636f890ede2cb56d97ef50b9cd483e`; dos workflows completos pasaron antes del merge.
 - `private/`, Excel/CSV, diagnóstico confidencial, entornos, adjuntos, respaldos y artefactos de pruebas/build siguen ignorados por Git y Docker.
-- El trabajo de datos e informes del 3 de octubre continúa en `codex/coro-voces-esperanza`; no se desplegó esta rama ni se modificó DNS.
+- El trabajo de datos e informes se integró en `main` mediante el PR 6 (`b0a71f3`). La interfaz integrada permanece en el PR 7, rama `codex/interfaz-reportes`, y no se fusionó ni desplegó.
+- La corrección operativa se preparó desde `main` en `codex/seguridad-operativa`; sus cambios son documentación y configuración exclusiva del recurso del coro.
 
 ## Cambio funcional principal de la rama actual
 
@@ -41,12 +42,15 @@ No se promovió, aprobó ni publicó ningún saldo, identidad de miembro, fecha 
 - Build productivo, 37 reglas de referencia y 6 E2E pasaron. La imagen local nueva arrancó, encontró 4 migraciones sin pendientes y respondió saludable; no se publicó ni desplegó.
 - La imagen del commit funcional es `voces-esperanza:e006564`, digest local `sha256:8b108e710da7c8293fa7b7e267e206deffffba9033fdfc3a9cf30ddabe925684`.
 - Persistencia y restauración pasaron con datos y adjunto sintéticos en recursos separados; ver `docs/DEPLOY-COOLIFY.md`.
-- Producción: `https://coro.syntavera.dev`, commit `786d8aa`, despliegue Coolify `Success` y health externo 200 con `no-store` y `noindex`.
+- Producción: `https://coro.syntavera.dev`, rama `main`, commit funcional `b0a71f3`. La interfaz de la PR 7 no forma parte de producción.
 - Coolify: proyecto `curszcfgrj5qgqoalyjpjfx1`, entorno `hqjrkmlxe1xybokuktovevmb`, app `qwag6glb0gc6jfzlfwa46fi4`, PostgreSQL `cw9lgsmko0t2rnramfsrqmrm`.
 - DNS: se usó el registro ya existente de `coro.syntavera.dev`; no se modificó Cloudflare ni se tocó `cintavera.dev`.
-- Respaldo `qpat2ip0sang71p3yfh0muwz`: diario a las 03:00, primera ejecución manual exitosa de 101.92 KB. La copia es local al host y no sustituye un respaldo externo.
+- Respaldo `qpat2ip0sang71p3yfh0muwz`: diario a las 03:00, copia local + R2, retención de 14 copias/14 días y detector después de 26 horas. El respaldo posterior a la rotación terminó `Success` con 109.44 KB. No hay canal saliente global habilitado para entregar la alerta.
+- `/data/uploads`: respaldo diario a las 03:05, corte consistente, copia local + R2 y retención de 14 copias/14 días. El volumen productivo está vacío; la primera copia fue de 137 B.
+- Se restauró el dump posterior a la rotación en PostgreSQL 17 temporal, sin red y en memoria. La descarga figuraba disponible local y S3; sigue pendiente forzar la recuperación exclusivamente desde R2.
+- Coolify quedó en despliegue manual controlado, sin previews y sin inyección automática de variables runtime como argumentos de build. Cuatro secretos del coro se rotaron y una sesión se revocó; ver `docs/SEGURIDAD-OPERATIVA.md`.
 - El acceso inicial ya está activo. No volver a ejecutar bootstrap salvo recuperación autorizada; no publicar identidad, contraseña, token ni enlace privado en documentación, GitHub, Notion o chat.
 
 ## Bloqueo explícito de diseño y despliegue
 
-El paquete revisado no contiene un export aprobado de Claude Design; solo contiene prompts, guía, texto explicativo e imágenes de ejemplo. La fase visual B queda pendiente de recibir ese artefacto. Esta rama no debe desplegarse ni cambiar DNS hasta que el diseño sea aprobado y los controles completos de build/E2E/CI pasen.
+La interfaz de Claude está implementada en la PR 7 y tiene CI aprobado, pero Jorge aún no ha dado aprobación visual. Mantenerla abierta, sin merge y sin despliegue. La revisión local debe usar datos sintéticos y autenticación; no usar credenciales personales ni promover el Excel.
