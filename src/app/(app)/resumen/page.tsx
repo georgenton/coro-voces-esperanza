@@ -3,6 +3,7 @@ import { Notice } from "@/components/notice";
 import { DashboardSummary } from "@/components/reports/dashboard-summary";
 import { HistoricalDashboardSummary } from "@/components/reports/historical-dashboard-summary";
 import { ReportSourceSwitcher } from "@/components/reports/report-source-switcher";
+import { PeriodNavigator } from "@/components/reports/period-navigator";
 import { requireAccess, isFinanceRole, isGlobalReadRole } from "@/lib/access";
 import { getDashboard } from "@/server/finance/dashboard";
 import { getHistoricalDashboard, resolveReportSource } from "@/server/reports/historical";
@@ -32,7 +33,7 @@ export default async function DashboardPage({
     const historical = await getHistoricalDashboard({ batchId: sourceContext.batchId, period });
     return (
       <div className="page">
-        <header className="page-header"><div><p className="eyebrow">Fuente histórica · corte documental {historical.period}</p><h1>Resumen del coro</h1><p className="lede">Datos reales preservados desde el Excel. Permanecen separados de cargos, pagos, movimientos y saldos operativos hasta su revisión y promoción explícitas.</p></div><form className="actions"><input type="hidden" name="source" value="historical"/><label htmlFor="period">Período de fuente</label><input id="period" name="period" type="month" defaultValue={historical.period}/><button className="button button-secondary">Aplicar</button></form></header>
+        <header className="page-header"><div><p className="eyebrow">Fuente histórica · corte documental {historical.period}</p><h1>Resumen del coro</h1><p className="lede">Datos reales preservados desde el Excel. Permanecen separados de cargos, pagos, movimientos y saldos operativos hasta su revisión y promoción explícitas.</p></div><PeriodNavigator pathname="/resumen" period={historical.period} params={{ source: "historical" }} label="Período de fuente" status={historical.periodSummary.status === "PARTIAL" ? "Mes parcial" : undefined}/></header>
         <ReportSourceSwitcher source="historical" pathname="/resumen" params={{ period: historical.period }}/>
         <Notice success={params.success} error={params.error} warning={historical.periodSummary.status === "PARTIAL" ? "Este período está documentado como parcial. No representa un cierre mensual conciliado." : "Fuente pendiente de validación. Sus totales no son saldos operativos."}/>
         <HistoricalDashboardSummary data={historical}/>
@@ -50,12 +51,7 @@ export default async function DashboardPage({
           <h1>{memberOnly ? "Mi cuenta" : "Resumen del coro"}</h1>
           <p className="lede">Los cargos, aplicaciones y movimientos se calculan por separado. Un pendiente de importación nunca se muestra como saldo cero validado.</p>
         </div>
-        <form className="actions">
-          <input type="hidden" name="source" value="operation" />
-          <label htmlFor="period">Período de corte</label>
-          <input id="period" name="period" type="month" defaultValue={period} />
-          <button className="button button-secondary">Aplicar</button>
-        </form>
+        <PeriodNavigator pathname="/resumen" period={period} params={{ source: "operation" }} label="Período de corte"/>
       </header>
       {sourceContext.canReadHistory && sourceContext.hasHistory ? <ReportSourceSwitcher source="operation" pathname="/resumen" params={{ period }}/> : null}
       <Notice success={params.success} error={params.error} />

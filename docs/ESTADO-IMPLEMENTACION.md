@@ -27,6 +27,7 @@ Fecha de corte: 4 de octubre de 2026.
 - Interfaz responsive integrada desde los artefactos de diseño recibidos: navegación activa con Lucide, papel cálido, tipografías Public Sans/Newsreader autoalojadas, semántica de estados con texto/icono/color, tema sistema/claro/oscuro y modales accesibles. No usa `iframe`, Babel en navegador ni runtime de demostración.
 - Bootstrap privado e interactivo del primer SUPERADMIN: contraseña oculta fuera de argumentos e historial, conservación idempotente de contraseña/sesiones, bloqueo ante otra administración o una identidad conflictiva y ninguna ficha de miembro implícita.
 - Workflow de GitHub Actions para lint, tipos, unitarias, reglas de referencia, migraciones PostgreSQL, integración, build, E2E y construcción Docker con fixtures sintéticos.
+- Corrección de fidelidad visual V01–V12 para histórico y operación: matriz compacta, libro mensual de seis columnas, procedencia en panel, controles de período, navegación agrupada/cajón móvil, contraste oscuro y contrato de 36 combinaciones sin cambios de datos.
 
 ## Evidencia ejecutada
 

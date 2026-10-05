@@ -75,3 +75,7 @@ Este entorno no contiene datos productivos, no desactiva autenticación y no usa
 - El bucket R2 y sus credenciales son compartidos por otros recursos de SyntaVera, aunque los objetos están separados por ruta. Un bucket/principal exclusivo del coro requiere una decisión global autorizada.
 - Coolify quedó en despliegue manual controlado. La inyección automática de argumentos está deshabilitada; los cuatro secretos afectados se rotaron y una sesión se revocó. Ver `docs/SEGURIDAD-OPERATIVA.md`.
 - Los canales salientes globales de notificación están deshabilitados. Los fallos se registran en Coolify, pero no existe un aviso externo comprobado.
+
+## Corrección de fidelidad visual 08
+
+La revisión posterior de `source=historical` cerró V01–V12 sin reimportar ni promover datos. Corrigió densidad, jerarquía, botones secundarios, contraste oscuro, navegación móvil, selector de período, libro de seis columnas, mes inicial de matriz y repetición de advertencias. La evidencia ahora incluye 36 combinaciones de aplicación, 18 referencias Claude y 18 estados históricos anteriores, todos sintéticos. Ver `docs/FIDELIDAD-VISUAL-08.md`.

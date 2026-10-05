@@ -24,6 +24,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:bootstrap-admin": "tsx prisma/bootstrap-admin.ts",
     "verify:reference": "node --test reference/finance-rules.test.mjs && node reference/verify-legacy.mjs",
+    "verify:visual-evidence": "node scripts/verify-visual-evidence.mjs",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
