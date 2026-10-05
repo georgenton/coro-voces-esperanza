@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FileSpreadsheet, Search } from "lucide-react";
 import { DetailDialog } from "@/components/detail-dialog";
+import { formatUsd } from "@/lib/money";
 
 export type HistoricalMonthlyRowView = {
   id: string;
@@ -20,7 +21,7 @@ export type HistoricalMonthlyRowView = {
   cells: Array<{ reference: string; displayValue: string | null; formula: string | null; cachedValue: string | null; originalDate: string | null }>;
 };
 
-export function HistoricalMonthlyLedger({ rows }: { rows: HistoricalMonthlyRowView[] }) {
+export function HistoricalMonthlyLedger({ rows, totalIncomeCents, totalExpenseCents }: { rows: HistoricalMonthlyRowView[]; totalIncomeCents: number; totalExpenseCents: number }) {
   const [selected, setSelected] = useState<HistoricalMonthlyRowView | null>(null);
 
   return (
@@ -28,7 +29,7 @@ export function HistoricalMonthlyLedger({ rows }: { rows: HistoricalMonthlyRowVi
       <section className="section table-wrap ledger-table" aria-label="Filas documentadas en la hoja mensual">
         <table className="sticky-report source-ledger">
           <thead>
-            <tr><th rowSpan={2} className="source-date-header">Fecha original</th><th colSpan={2} className="source-income-header">Ingresos documentados</th><th colSpan={2} className="source-expense-header">Egresos documentados</th><th rowSpan={2} className="source-note-header">Observaciones</th><th rowSpan={2}>Origen</th></tr>
+            <tr><th rowSpan={2} className="source-date-header">Fecha original</th><th colSpan={2} className="source-income-header">Ingresos documentados</th><th colSpan={2} className="source-expense-header">Egresos documentados</th><th rowSpan={2} className="source-note-header">Observaciones</th></tr>
             <tr><th className="source-income-header">Detalle</th><th className="source-income-header numeric">Monto</th><th className="source-expense-header">Detalle</th><th className="source-expense-header numeric">Monto</th></tr>
           </thead>
           <tbody>{rows.length ? rows.map((row) => <tr key={row.id} className="interactive-row" tabIndex={0} onClick={() => setSelected(row)} onKeyDown={(event) => { if (event.key === "Enter") setSelected(row); }}>
@@ -37,9 +38,9 @@ export function HistoricalMonthlyLedger({ rows }: { rows: HistoricalMonthlyRowVi
             <td className="source-income-cell numeric">{row.incomeAmount}</td>
             <td className="source-expense-cell">{row.expenseDetail}</td>
             <td className="source-expense-cell numeric">{row.expenseAmount}</td>
-            <td>{row.observation}</td>
-            <td className="source-origin-cell"><strong>{row.sheetName}</strong><small>fila {row.rowNumber}</small></td>
-          </tr>) : <tr><td colSpan={7} className="empty"><Search aria-hidden="true" size={20}/> No hay filas de movimiento candidatas para este filtro.</td></tr>}</tbody>
+            <td className="source-observation-cell"><details onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}><summary>{row.observation || "Sin observación"}</summary><p>{row.observation || "La fila no contiene observación."}</p></details></td>
+          </tr>) : <tr><td colSpan={6} className="empty"><Search aria-hidden="true" size={20}/> No hay filas de movimiento candidatas para este filtro.</td></tr>}</tbody>
+          <tfoot><tr><th colSpan={2}>Totales documentados del filtro</th><td className="numeric source-income-cell">{formatUsd(totalIncomeCents)}</td><th className="source-expense-cell">Egresos</th><td className="numeric source-expense-cell">{formatUsd(totalExpenseCents)}</td><td>Sin inferir saldo</td></tr></tfoot>
         </table>
       </section>
 

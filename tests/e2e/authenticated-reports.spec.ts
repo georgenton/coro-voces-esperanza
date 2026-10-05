@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { expect, test, type Download, type Page } from "@playwright/test";
 
 const PASSWORD = "Voces-E2E-2026!";
 const USERS = {
@@ -13,6 +14,12 @@ async function signIn(page: Page, email: string) {
   await page.getByLabel("Contraseña").fill(PASSWORD);
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page).toHaveURL(/\/resumen/);
+}
+
+async function downloadText(download: Download) {
+  const file = await download.path();
+  if (!file) throw new Error("La descarga no produjo un archivo local.");
+  return readFile(file, "utf8");
 }
 
 test("tesorería consulta el dashboard y conserva el período al navegar", async ({ page }) => {
@@ -67,7 +74,6 @@ test("matriz anual filtra y expone el cargo sin confundir ausencia con pago", as
 
   const mobile = (page.viewportSize()?.width ?? 1000) <= 650;
   if (mobile) {
-    for (let index = 0; index < 8; index += 1) await page.getByRole("button", { name: "Siguiente →" }).click();
     await expect(page.getByRole("columnheader", { name: "Sep" })).toBeVisible();
   }
   const september = page.getByLabel(/Alba Sintética, 2026-09:/);
@@ -89,6 +95,60 @@ test("matriz anual filtra y expone el cargo sin confundir ausencia con pago", as
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("link", { name: "Exportar CSV" }).click();
   expect((await downloadPromise).suggestedFilename()).toContain("cuotas-monthly_dues-2026-corte-2026-09.csv");
+});
+
+test("fuente histórica conserva significado, procedencia y CSV sin crear operaciones", async ({ page }) => {
+  await signIn(page, USERS.admin);
+  await page.goto("/reportes/movimientos?period=2026-09&source=historical");
+  await expect(page.getByRole("columnheader", { name: "Origen" })).toHaveCount(0);
+  const row = page.locator("tbody tr").filter({ hasText: "Aporte coral sintético" });
+  await row.locator("td").first().click();
+  const rowDialog = page.getByRole("dialog", { name: "Observación breve" });
+  await expect(rowDialog.getByText(/Fuente histórica, no operación validada/)).toBeVisible();
+  await expect(rowDialog.getByText(/SEPTIEMBRE 2026!/).first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(rowDialog).not.toBeVisible();
+  const observation = page.locator(".source-observation-cell summary").first();
+  await observation.click();
+  await expect(page.locator(".source-observation-cell details").first()).toHaveAttribute("open", "");
+
+  const monthlyDownload = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Exportar fuente CSV" }).click();
+  const monthlyCsv = await downloadText(await monthlyDownload);
+  expect(monthlyCsv).toContain("Aporte coral sintético");
+  expect(monthlyCsv).toContain("15.00");
+  expect(monthlyCsv).not.toContain("Pago coral sintético");
+
+  await page.goto("/reportes/cuotas?year=2026&cutoff=2026-09&month=9&source=historical");
+  await expect(page.getByText("Pagado", { exact: true })).toHaveCount(0);
+  const documentedCell = page.getByLabel(/Alba Sintética, 2026-09: Importe documentado/);
+  await documentedCell.click();
+  const cellDialog = page.getByRole("dialog", { name: "Alba Sintética" });
+  await expect(cellDialog.getByText(/Evidencia literal del Excel/)).toBeVisible();
+  await expect(cellDialog.getByText(/SOLO CUOTAS 2026!/).first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(documentedCell).toBeFocused();
+
+  const duesDownload = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Exportar fuente CSV" }).click();
+  const duesCsv = await downloadText(await duesDownload);
+  expect(duesCsv).toContain("Alba Sintética");
+  expect(duesCsv).toContain("AMOUNT");
+  expect(duesCsv).not.toContain("PAID");
+});
+
+test("menú móvil es operable con teclado y conserva el foco", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "El cajón solo se presenta a 820 px o menos.");
+  await signIn(page, USERS.admin);
+  const trigger = page.getByRole("button", { name: "Abrir menú principal" });
+  await trigger.focus();
+  await trigger.press("Enter");
+  const menu = page.getByRole("dialog", { name: "Menú principal" });
+  await expect(menu).toBeVisible();
+  await expect(page.getByRole("link", { name: "Cuotas de miembros" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).not.toBeVisible();
+  await expect(trigger).toBeFocused();
 });
 
 test("el servidor aplica alcance de cuerda y alcance individual", async ({ browser }) => {

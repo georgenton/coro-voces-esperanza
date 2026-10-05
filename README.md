@@ -34,6 +34,7 @@ pnpm typecheck
 pnpm test
 pnpm test:integration
 pnpm test:e2e
+pnpm verify:visual-evidence
 pnpm build
 pnpm db:migrate
 pnpm verify:reference
@@ -82,5 +83,6 @@ La vista **Histórico fuente** permite revisar hojas, filas, celdas, fórmulas, 
 - `docs/CONTRATO-PROMOCION.md`: contrato de staging, aprobación, vista previa y publicación.
 - `docs/MATRIZ-C01-C50.md`: trazabilidad de cada criterio a prueba, comando y evidencia.
 - `docs/REVISION-INTERFAZ.md`: procedencia del diseño, integración real, R01–R04 y evidencia responsive.
+- `docs/FIDELIDAD-VISUAL-08.md`: V01–V12, medidas referencia/antes/después, diferencias intencionales y matriz visual de 36 casos.
 
 `private/`, Excel, comprobantes, respaldos y el diagnóstico confidencial están ignorados por Git y Docker.

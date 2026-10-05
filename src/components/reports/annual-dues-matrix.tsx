@@ -52,16 +52,24 @@ function cellText(cell: AnnualDuesRowView["months"][number]) {
   return STATUS_LABELS[cell.status] ?? cell.status;
 }
 
-export function AnnualDuesMatrix({ rows, conceptName }: { rows: AnnualDuesRowView[]; conceptName: string }) {
-  const [monthIndex, setMonthIndex] = useState(0);
+export function AnnualDuesMatrix({ rows, conceptName, initialMonthIndex = 0 }: { rows: AnnualDuesRowView[]; conceptName: string; initialMonthIndex?: number }) {
+  const [monthIndex, setMonthIndex] = useState(initialMonthIndex);
   const [selected, setSelected] = useState<{ row: AnnualDuesRowView; cell: AnnualDuesRowView["months"][number] } | null>(null);
+
+  function selectMonth(index: number) {
+    const next = Math.max(0, Math.min(11, index));
+    setMonthIndex(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("month", String(next + 1));
+    window.history.replaceState(null, "", url);
+  }
 
   return (
     <>
       <div className="mobile-month-nav section" aria-label="Mes visible en móvil">
-        <button className="button button-secondary button-small" type="button" disabled={monthIndex === 0} onClick={() => setMonthIndex((value) => Math.max(0, value - 1))}>← Anterior</button>
+        <button className="button button-secondary button-small" type="button" disabled={monthIndex === 0} onClick={() => selectMonth(monthIndex - 1)}>← Anterior</button>
         <strong>{MONTH_LABELS[monthIndex]}</strong>
-        <button className="button button-secondary button-small" type="button" disabled={monthIndex === 11} onClick={() => setMonthIndex((value) => Math.min(11, value + 1))}>Siguiente →</button>
+        <button className="button button-secondary button-small" type="button" disabled={monthIndex === 11} onClick={() => selectMonth(monthIndex + 1)}>Siguiente →</button>
       </div>
       <section className="section table-wrap annual-matrix">
         <table className="sticky-report">

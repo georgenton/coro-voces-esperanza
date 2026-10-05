@@ -22,12 +22,15 @@ export function HistoricalDashboardSummary({ data }: { data: HistoricalDashboard
   const maxTrend = Math.max(1, ...data.monthlyTrend.flatMap((item) => [item.incomeCents, item.expenseCents]));
   return (
     <>
-      <section className="grid grid-4" aria-label="Cobertura de la fuente histórica">
+      <details className="audit-details">
+        <summary>Detalles técnicos de la fuente</summary>
+        <section className="grid grid-4" aria-label="Cobertura de la fuente histórica">
         <article className="card metric-card"><div className="metric-icon"><Database aria-hidden="true" size={18}/></div><div className="metric-label">Filas preservadas</div><div className="metric-value">{data.batch._count.rows}</div><div className="metric-note">Staging inmutable; no son operaciones</div></article>
         <article className="card metric-card"><div className="metric-icon"><FileSpreadsheet aria-hidden="true" size={18}/></div><div className="metric-label">Celdas con evidencia</div><div className="metric-value">{data.batch._count.sourceCells}</div><div className="metric-note">Literal, fórmula, caché y procedencia</div></article>
         <article className="card metric-card"><div className="metric-icon"><Rows3 aria-hidden="true" size={18}/></div><div className="metric-label">Filas mensuales candidatas</div><div className="metric-value">{data.candidateRows}</div><div className="metric-note">Sin promover como movimiento</div></article>
         <article className="card metric-card"><div className="metric-icon metric-icon-warning"><AlertTriangle aria-hidden="true" size={18}/></div><div className="metric-label">Incidencias pendientes</div><div className="metric-value">{data.pendingIssues}</div><div className="metric-note">Exigen decisión administrativa</div><Link className="card-link" href={`/reportes/historico?batch=${data.batch.id}`}>Abrir bandeja →</Link></article>
-      </section>
+        </section>
+      </details>
 
       <section className="section grid grid-2">
         <article className="card"><div className="section-header"><div><p className="eyebrow">Datos documentados · no conciliados</p><h2>Tendencia de seis meses</h2></div><Link className="card-link" href={`/reportes/movimientos?period=${data.period}&source=historical`}>Abrir {data.period} →</Link></div>
